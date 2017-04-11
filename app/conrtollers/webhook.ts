@@ -1,8 +1,9 @@
 /**
  * LINE webhookコントローラ
  */
-
+import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
+import * as mongoose from 'mongoose';
 import * as querystring from 'querystring';
 import * as request from 'request-promise-native';
 
@@ -11,13 +12,121 @@ const debug = createDebug('sskts-linereport:controller:webhook');
 /**
  * メッセージが送信されたことを示すEvent Objectです。
  */
+// tslint:disable-next-line:max-func-body-length
 export async function message(event: any) {
     const message: string = event.message.text;
     const MID = event.source.userId;
 
     switch (true) {
         case /^\d{1,8}$/.test(message):
-            await pushMessage(MID, `購入番号:${message}`);
+            // 取引検索
+            const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+            const queueAdapter = sskts.adapter.queue(mongoose.connection);
+            const transactionDoc = await transactionAdapter.transactionModel.findOne(
+                {
+                    'inquiry_key.reserve_num': message
+                }
+            ).exec();
+
+            if (transactionDoc === null) {
+                await pushMessage(MID, 'no transaction');
+                return;
+            }
+
+            await pushMessage(MID, `ステータス:${transactionDoc.get('status')}
+キュー出力ステータス:${transactionDoc.get('queues_status')}
+開始日時:${transactionDoc.get('started_at')}
+成立日時:${transactionDoc.get('closed_at')}
+期限切れ日時:${transactionDoc.get('expired_at')}
+キュー出力日時:${transactionDoc.get('queues_exported_at')}
+tel:${transactionDoc.get('inquiry_key').tel}`
+            );
+
+            if (transactionDoc.get('status') !== sskts.factory.transactionStatus.CLOSED) {
+                return;
+            }
+
+            let queueStatus4coaAuthorization = sskts.factory.queueStatus.UNEXECUTED;
+            let queueStatus4gmoAuthorization = sskts.factory.queueStatus.UNEXECUTED;
+            let queueStatus4emailNotification = sskts.factory.queueStatus.UNEXECUTED;
+            const authorizations = await transactionAdapter.findAuthorizationsById(transactionDoc.get('_id'));
+            const notifications = await transactionAdapter.findNotificationsById(transactionDoc.get('_id'));
+
+            let promises: Promise<void>[] = [];
+            promises = promises.concat(authorizations.map(async (authorization) => {
+                const queueDoc = await queueAdapter.model.findOne({
+                    group: sskts.factory.queueGroup.SETTLE_AUTHORIZATION,
+                    'authorization.id': authorization.id
+                }).exec();
+
+                switch (authorization.group) {
+                    case sskts.factory.authorizationGroup.COA_SEAT_RESERVATION:
+                        queueStatus4coaAuthorization = queueDoc.get('status');
+                        break;
+                    case sskts.factory.authorizationGroup.GMO:
+                        queueStatus4gmoAuthorization = queueDoc.get('status');
+                        break;
+                    default:
+                        break;
+                }
+            }));
+
+            promises = promises.concat(notifications.map(async (notification) => {
+                const queueDoc = await queueAdapter.model.findOne({
+                    group: sskts.factory.queueGroup.PUSH_NOTIFICATION,
+                    'notification.id': notification.id
+                }).exec();
+
+                switch (notification.group) {
+                    case sskts.factory.notificationGroup.EMAIL:
+                        queueStatus4emailNotification = queueDoc.get('status');
+                        break;
+                    default:
+                        break;
+                }
+            }));
+
+            await Promise.all(promises);
+
+            await pushMessage(MID, `メール送信:${queueStatus4emailNotification}
+本予約:${queueStatus4coaAuthorization}
+売上:${queueStatus4gmoAuthorization}`
+            );
+
+            // キュー実行のボタン表示
+            await request.post({
+                simple: false,
+                url: 'https://api.line.me/v2/bot/message/push',
+                auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+                json: true,
+                body: {
+                    to: MID,
+                    messages: [
+                        {
+                            type: 'template',
+                            altText: 'aaa',
+                            template: {
+                                type: 'buttons',
+                                // thumbnailImageUrl: 'https://devssktslinebotdemo.blob.core.windows.net/image/tokyo.PNG',
+                                text: 'キュー実行できます',
+                                actions: [
+                                    {
+                                        type: 'postback',
+                                        label: 'メール送信',
+                                        data: `action=pushNotification&transaction=${transactionDoc.get('id')}`
+                                    },
+                                    {
+                                        type: 'postback',
+                                        label: '本予約',
+                                        data: `action=transferCoaSeatReservationAuthorization&transaction=${transactionDoc.get('id')}`
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }).promise();
+
             break;
         default:
             await pushMessage(MID, '???');
@@ -28,15 +137,103 @@ export async function message(event: any) {
 /**
  * イベントの送信元が、template messageに付加されたポストバックアクションを実行したことを示すevent objectです。
  */
+// tslint:disable-next-line:max-func-body-length
 export async function postback(event: any) {
     const data = querystring.parse(event.postback.data);
     debug('data is', data);
     const MID = event.source.userId;
 
-    switch (data.action) {
-        case 'sendEmail':
-            await pushMessage(MID, 'sendEmail');
+    const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+    let promises: Promise<void>[] = [];
 
+    switch (data.action) {
+        case 'pushNotification':
+            await pushMessage(MID, 'メールを送信しています...');
+
+            // 取引検索
+            const transactionDoc4notification = await transactionAdapter.transactionModel.findById(data.transaction).exec();
+
+            if (transactionDoc4notification === null) {
+                await pushMessage(MID, 'no transaction');
+                return;
+            }
+
+            if (transactionDoc4notification.get('status') !== sskts.factory.transactionStatus.CLOSED) {
+                return;
+            }
+
+            const notifications = await transactionAdapter.findNotificationsById(transactionDoc4notification.get('_id'));
+            debug(notifications);
+            if (notifications.length === 0) {
+                await pushMessage(MID, '通知がありません');
+                return;
+            }
+
+            promises = [];
+            promises = promises.concat(notifications.map(async (notification) => {
+                switch (notification.group) {
+                    case sskts.factory.notificationGroup.EMAIL:
+                        await sskts.service.notification.sendEmail(<any>notification)();
+                        break;
+                    default:
+                        break;
+                }
+            }));
+
+            try {
+                await Promise.all(promises);
+            } catch (error) {
+                await pushMessage(MID, `送信できませんでした ${error.message}`);
+                return;
+            }
+
+            await pushMessage(MID, '送信しました');
+            break;
+
+        case 'transferCoaSeatReservationAuthorization':
+            await pushMessage(MID, '本予約処理をしています...');
+
+            // 取引検索
+            const transactionDoc4transfer = await transactionAdapter.transactionModel.findById(data.transaction).exec();
+
+            if (transactionDoc4transfer === null) {
+                await pushMessage(MID, 'no transaction');
+                return;
+            }
+
+            if (transactionDoc4transfer.get('status') !== sskts.factory.transactionStatus.CLOSED) {
+                return;
+            }
+
+            const authorizations = await transactionAdapter.findAuthorizationsById(transactionDoc4transfer.get('_id'));
+            debug(authorizations);
+            if (authorizations.length === 0) {
+                await pushMessage(MID, '仮予約データがありません');
+                return;
+            }
+
+            promises = [];
+            promises = promises.concat(authorizations.map(async (authorization) => {
+                switch (authorization.group) {
+                    case sskts.factory.authorizationGroup.COA_SEAT_RESERVATION:
+                        await sskts.service.stock.transferCOASeatReservation(<any>authorization)(
+                            sskts.adapter.asset(mongoose.connection),
+                            sskts.adapter.owner(mongoose.connection)
+                        );
+                        break;
+                    default:
+                        break;
+                }
+            }));
+
+            try {
+                await Promise.all(promises);
+            } catch (error) {
+                await pushMessage(MID, `本予約できませんした ${error.message}`);
+                return;
+            }
+
+            await pushMessage(MID, '本予約完了');
             break;
 
         default:
