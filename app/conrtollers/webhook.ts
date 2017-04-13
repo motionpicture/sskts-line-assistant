@@ -1,6 +1,7 @@
 /**
  * LINE webhookコントローラ
  */
+import * as COA from '@motionpicture/coa-service';
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as mongoose from 'mongoose';
@@ -44,6 +45,58 @@ tel:${transactionDoc.get('inquiry_key').tel}`
 
             if (transactionDoc.get('status') !== sskts.factory.transactionStatus.CLOSED) {
                 return;
+            }
+
+            debug(transactionDoc.get('inquiry_key'));
+            if (transactionDoc.get('inquiry_key') !== undefined) {
+                const inquiryKey = transactionDoc.get('inquiry_key');
+                // COAからQRを取得
+                const stateReserveResult = await COA.ReserveService.stateReserve(
+                    {
+                        theater_code: inquiryKey.theater_code,
+                        reserve_num: inquiryKey.reserve_num,
+                        tel_num: inquiryKey.tel
+                    }
+                );
+                debug(stateReserveResult);
+
+                if (stateReserveResult !== null) {
+                    stateReserveResult.list_ticket.forEach(async (ticket) => {
+                        // push message
+                        await request.post({
+                            simple: false,
+                            url: 'https://api.line.me/v2/bot/message/push',
+                            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+                            json: true,
+                            body: {
+                                to: MID,
+                                messages: [
+                                    {
+                                        type: 'imagemap',
+                                        baseUrl: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`,
+                                        altText: ticket.seat_num,
+                                        baseSize: {
+                                            height: 1040,
+                                            width: 1040
+                                        },
+                                        actions: [
+                                            {
+                                                type: 'message',
+                                                text: '入場？？',
+                                                area: {
+                                                    x: 520,
+                                                    y: 0,
+                                                    width: 1040,
+                                                    height: 1040
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }).promise();
+                    });
+                }
             }
 
             let queueStatus4coaAuthorization = sskts.factory.queueStatus.UNEXECUTED;

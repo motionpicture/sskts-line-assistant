@@ -27,7 +27,7 @@ router.all('/', (req, res) => __awaiter(this, void 0, void 0, function* () {
     //         {
     //             "message": {
     //                 "id": "5647872913345",
-    //                 "text": "1381",
+    //                 "text": "27",
     //                 "type": "text"
     //             },
     //             "replyToken": "26d0dd0923a94583871ecd7e6efec8e2",
