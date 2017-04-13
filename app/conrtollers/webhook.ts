@@ -72,25 +72,10 @@ tel:${transactionDoc.get('inquiry_key').tel}`
                                 to: MID,
                                 messages: [
                                     {
-                                        type: 'imagemap',
-                                        baseUrl: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`,
-                                        altText: ticket.seat_num,
-                                        baseSize: {
-                                            height: 1040,
-                                            width: 1040
-                                        },
-                                        actions: [
-                                            {
-                                                type: 'message',
-                                                text: '入場？？',
-                                                area: {
-                                                    x: 520,
-                                                    y: 0,
-                                                    width: 1040,
-                                                    height: 1040
-                                                }
-                                            }
-                                        ]
+                                        type: 'image',
+                                        // tslint:disable-next-line:max-line-length
+                                        originalContentUrl: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`,
+                                        previewImageUrl: `https://chart.apis.google.com/chart?chs=150x150&cht=qr&chl=${ticket.seat_qrcode}`
                                     }
                                 ]
                             }
