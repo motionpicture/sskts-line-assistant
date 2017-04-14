@@ -25,24 +25,6 @@ router.all('/', (req, res) => __awaiter(this, void 0, void 0, function* () {
     // req.body = {
     //     "events": [
     //         {
-    //             "message": {
-    //                 "id": "5647872913345",
-    //                 "text": "33",
-    //                 "type": "text"
-    //             },
-    //             "replyToken": "26d0dd0923a94583871ecd7e6efec8e2",
-    //             "source": {
-    //                 "type": "user",
-    //                 "userId": "U28fba84b4008d60291fc861e2562b34f"
-    //             },
-    //             "timestamp": 1487085535998,
-    //             "type": "message"
-    //         }
-    //     ]
-    // };
-    // req.body = {
-    //     "events": [
-    //         {
     //             "replyToken": "nHuyWiB7yP5Zw52FIkcQobQuGDXCTA",
     //             "type": "postback",
     //             "timestamp": 1462629479859,

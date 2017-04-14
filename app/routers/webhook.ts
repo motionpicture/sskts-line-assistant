@@ -15,24 +15,6 @@ const debug = createDebug('sskts-linereport:*');
 // tslint:disable-next-line:max-func-body-length
 router.all('/', async (req, res) => {
     debug('body:', JSON.stringify(req.body));
-    // req.body = {
-    //     "events": [
-    //         {
-    //             "message": {
-    //                 "id": "5647872913345",
-    //                 "text": "33",
-    //                 "type": "text"
-    //             },
-    //             "replyToken": "26d0dd0923a94583871ecd7e6efec8e2",
-    //             "source": {
-    //                 "type": "user",
-    //                 "userId": "U28fba84b4008d60291fc861e2562b34f"
-    //             },
-    //             "timestamp": 1487085535998,
-    //             "type": "message"
-    //         }
-    //     ]
-    // };
 
     // req.body = {
     //     "events": [

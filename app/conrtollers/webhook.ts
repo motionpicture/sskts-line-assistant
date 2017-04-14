@@ -1,9 +1,10 @@
 /**
- * LINE webhookコントローラ
+ * LINE webhookコントローラー
  */
 import * as COA from '@motionpicture/coa-service';
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
+import * as moment from 'moment';
 import * as mongoose from 'mongoose';
 import * as querystring from 'querystring';
 import * as request from 'request-promise-native';
@@ -22,44 +23,98 @@ export async function message(event: any) {
         case /^\d{1,8}$/.test(message):
             // 取引検索
             const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+            const performanceAdapter = sskts.adapter.performance(mongoose.connection);
             const queueAdapter = sskts.adapter.queue(mongoose.connection);
-            const transactionDoc = await transactionAdapter.transactionModel.findOne(
-                {
-                    'inquiry_key.reserve_num': message
-                }
-            ).exec();
+            const transactionDoc = await transactionAdapter.transactionModel.findOne({ 'inquiry_key.reserve_num': message })
+                .populate('owners').exec();
 
             if (transactionDoc === null) {
                 await pushMessage(MID, 'no transaction');
                 return;
             }
 
-            await pushMessage(MID, `ステータス:${transactionDoc.get('status')}
-キュー出力ステータス:${transactionDoc.get('queues_status')}
-開始日時:${transactionDoc.get('started_at')}
-成立日時:${transactionDoc.get('closed_at')}
-期限切れ日時:${transactionDoc.get('expired_at')}
-キュー出力日時:${transactionDoc.get('queues_exported_at')}
-tel:${transactionDoc.get('inquiry_key').tel}`
-            );
+            const transaction = sskts.factory.transaction.create(<any>transactionDoc.toObject());
+            debug(transaction);
+            const anonymousOwnerObject = transaction.owners.find((owner) => owner.group === sskts.factory.ownerGroup.ANONYMOUS);
+            if (anonymousOwnerObject === undefined) {
+                throw new Error('owner not found');
+            }
+            const anonymousOwner = sskts.factory.owner.anonymous.create(anonymousOwnerObject);
 
-            if (transactionDoc.get('status') !== sskts.factory.transactionStatus.CLOSED) {
+            const authorizations = await transactionAdapter.findAuthorizationsById(transaction.id);
+            const notifications = await transactionAdapter.findNotificationsById(transaction.id);
+
+            const gmoAuthorizationObject = authorizations.find((authorization) => {
+                return (authorization.owner_from === anonymousOwner.id && authorization.group === sskts.factory.authorizationGroup.GMO);
+            });
+            const gmoAuthorization = sskts.factory.authorization.gmo.create(<any>gmoAuthorizationObject);
+
+            const coaSeatReservationAuthorizationObject = authorizations.find((authorization) => {
+                return (
+                    authorization.owner_to === anonymousOwner.id &&
+                    authorization.group === sskts.factory.authorizationGroup.COA_SEAT_RESERVATION
+                );
+            });
+            const coaSeatReservationAuthorization =
+                sskts.factory.authorization.coaSeatReservation.create(<any>coaSeatReservationAuthorizationObject);
+
+            const performanceOption =
+                await sskts.service.master.findPerformance(coaSeatReservationAuthorization.assets[0].performance)(performanceAdapter);
+            if (performanceOption.isEmpty) {
+                throw new Error('performance not found');
+            }
+            const performance = performanceOption.get();
+            debug(performance);
+
+            const transactionDetails = `----------------
+取引状況
+----------------
+ステータス:${transaction.status}
+キュー:${transaction.queues_status}
+開始:
+${(transaction.started_at instanceof Date) ? moment(transaction.started_at).toISOString() : ''}
+成立:
+${(transaction.closed_at instanceof Date) ? moment(transaction.closed_at).toISOString() : ''}
+期限切れ:
+${(transaction.expired_at instanceof Date) ? moment(transaction.expired_at).toISOString() : ''}
+キュー出力:
+${(transaction.queues_exported_at instanceof Date) ? moment(transaction.queues_exported_at).toISOString() : ''}
+----------------
+購入者情報
+----------------
+${anonymousOwner.name_first} ${anonymousOwner.name_last}
+${anonymousOwner.email}
+${anonymousOwner.tel}
+----------------
+購入内容
+----------------
+${performance.film.name.ja}
+${performance.day} ${performance.time_start}-
+@${performance.theater.name.ja} ${performance.screen.name.ja}
+￥${gmoAuthorization.price}
+----------------
+GMO
+----------------
+${gmoAuthorization.gmo_order_id}`
+                ;
+            await pushMessage(MID, transactionDetails);
+
+            if (transaction.status !== sskts.factory.transactionStatus.CLOSED) {
                 return;
             }
 
-            debug(transactionDoc.get('inquiry_key'));
-            if (transactionDoc.get('inquiry_key') !== undefined) {
-                const inquiryKey = transactionDoc.get('inquiry_key');
+            if (transaction.inquiry_key !== undefined) {
                 // COAからQRを取得
                 const stateReserveResult = await COA.ReserveService.stateReserve(
                     {
-                        theater_code: inquiryKey.theater_code,
-                        reserve_num: inquiryKey.reserve_num,
-                        tel_num: inquiryKey.tel
+                        theater_code: transaction.inquiry_key.theater_code,
+                        reserve_num: transaction.inquiry_key.reserve_num,
+                        tel_num: transaction.inquiry_key.tel
                     }
                 );
                 debug(stateReserveResult);
 
+                // 本予約済みであればQRコード送信
                 if (stateReserveResult !== null) {
                     stateReserveResult.list_ticket.forEach(async (ticket) => {
                         // push message
@@ -87,8 +142,6 @@ tel:${transactionDoc.get('inquiry_key').tel}`
             let queueStatus4coaAuthorization = sskts.factory.queueStatus.UNEXECUTED;
             let queueStatus4gmoAuthorization = sskts.factory.queueStatus.UNEXECUTED;
             let queueStatus4emailNotification = sskts.factory.queueStatus.UNEXECUTED;
-            const authorizations = await transactionAdapter.findAuthorizationsById(transactionDoc.get('_id'));
-            const notifications = await transactionAdapter.findNotificationsById(transactionDoc.get('_id'));
 
             let promises: Promise<void>[] = [];
             promises = promises.concat(authorizations.map(async (authorization) => {
@@ -145,18 +198,17 @@ tel:${transactionDoc.get('inquiry_key').tel}`
                             altText: 'aaa',
                             template: {
                                 type: 'buttons',
-                                // thumbnailImageUrl: 'https://devssktslinebotdemo.blob.core.windows.net/image/tokyo.PNG',
-                                text: 'キュー実行できます',
+                                text: 'キュー実行',
                                 actions: [
                                     {
                                         type: 'postback',
                                         label: 'メール送信',
-                                        data: `action=pushNotification&transaction=${transactionDoc.get('id')}`
+                                        data: `action=pushNotification&transaction=${transaction.id}`
                                     },
                                     {
                                         type: 'postback',
                                         label: '本予約',
-                                        data: `action=transferCoaSeatReservationAuthorization&transaction=${transactionDoc.get('id')}`
+                                        data: `action=transferCoaSeatReservationAuthorization&transaction=${transaction.id}`
                                     }
                                 ]
                             }
@@ -167,7 +219,8 @@ tel:${transactionDoc.get('inquiry_key').tel}`
 
             break;
         default:
-            await pushMessage(MID, '???');
+            // 何もしない
+            // await pushMessage(MID, '???');
             break;
     }
 }
