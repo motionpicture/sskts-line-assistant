@@ -66,42 +66,86 @@ export async function message(event: any) {
             const performance = performanceOption.get();
             debug(performance);
 
-            const transactionDetails = `----------------
+            let transactionDetails = `--------------------
 取引状況
-----------------
+--------------------
 ステータス:${transaction.status}
 キュー:${transaction.queues_status}
-開始:
-${(transaction.started_at instanceof Date) ? moment(transaction.started_at).toISOString() : ''}
-成立:
-${(transaction.closed_at instanceof Date) ? moment(transaction.closed_at).toISOString() : ''}
-期限切れ:
-${(transaction.expired_at instanceof Date) ? moment(transaction.expired_at).toISOString() : ''}
-キュー出力:
-${(transaction.queues_exported_at instanceof Date) ? moment(transaction.queues_exported_at).toISOString() : ''}
-----------------
+開始:${(transaction.started_at instanceof Date) ? moment(transaction.started_at).format('YYYY-MM-DD HH:mm:ss') : ''}
+成立:${(transaction.closed_at instanceof Date) ? moment(transaction.closed_at).format('YYYY-MM-DD HH:mm:ss') : ''}
+期限切れ:${(transaction.expired_at instanceof Date) ? moment(transaction.expired_at).format('YYYY-MM-DD HH:mm:ss') : ''}
+キュー:${(transaction.queues_exported_at instanceof Date) ? moment(transaction.queues_exported_at).format('YYYY-MM-DD HH:mm:ss') : ''}
+--------------------
 購入者情報
-----------------
+--------------------
 ${anonymousOwner.name_first} ${anonymousOwner.name_last}
 ${anonymousOwner.email}
 ${anonymousOwner.tel}
-----------------
+--------------------
 購入内容
-----------------
+--------------------
 ${performance.film.name.ja}
-${performance.day} ${performance.time_start}-
+${performance.day} ${performance.time_start}-${performance.time_end}
 @${performance.theater.name.ja} ${performance.screen.name.ja}
+${coaSeatReservationAuthorization.assets.map((asset) => `●${asset.seat_code} ${asset.ticket_name_ja} ￥${asset.sale_price}`).join('\n')}
 ￥${gmoAuthorization.price}
-----------------
+--------------------
 GMO
-----------------
+--------------------
 ${gmoAuthorization.gmo_order_id}`
                 ;
-            await pushMessage(MID, transactionDetails);
 
-            if (transaction.status !== sskts.factory.transactionStatus.CLOSED) {
-                return;
+            if (transaction.status === sskts.factory.transactionStatus.CLOSED) {
+                let queueStatus4coaAuthorization = sskts.factory.queueStatus.UNEXECUTED;
+                let queueStatus4gmoAuthorization = sskts.factory.queueStatus.UNEXECUTED;
+                let queueStatus4emailNotification = sskts.factory.queueStatus.UNEXECUTED;
+
+                let promises: Promise<void>[] = [];
+                promises = promises.concat(authorizations.map(async (authorization) => {
+                    const queueDoc = await queueAdapter.model.findOne({
+                        group: sskts.factory.queueGroup.SETTLE_AUTHORIZATION,
+                        'authorization.id': authorization.id
+                    }).exec();
+
+                    switch (authorization.group) {
+                        case sskts.factory.authorizationGroup.COA_SEAT_RESERVATION:
+                            queueStatus4coaAuthorization = queueDoc.get('status');
+                            break;
+                        case sskts.factory.authorizationGroup.GMO:
+                            queueStatus4gmoAuthorization = queueDoc.get('status');
+                            break;
+                        default:
+                            break;
+                    }
+                }));
+
+                promises = promises.concat(notifications.map(async (notification) => {
+                    const queueDoc = await queueAdapter.model.findOne({
+                        group: sskts.factory.queueGroup.PUSH_NOTIFICATION,
+                        'notification.id': notification.id
+                    }).exec();
+
+                    switch (notification.group) {
+                        case sskts.factory.notificationGroup.EMAIL:
+                            queueStatus4emailNotification = queueDoc.get('status');
+                            break;
+                        default:
+                            break;
+                    }
+                }));
+
+                await Promise.all(promises);
+
+                transactionDetails += `
+--------------------
+処理ステータス
+--------------------
+メール送信:${queueStatus4emailNotification}
+本予約:${queueStatus4coaAuthorization}
+売上:${queueStatus4gmoAuthorization}`;
             }
+
+            await pushMessage(MID, transactionDetails);
 
             if (transaction.inquiry_key !== undefined) {
                 // COAからQRを取得
@@ -138,51 +182,6 @@ ${gmoAuthorization.gmo_order_id}`
                     });
                 }
             }
-
-            let queueStatus4coaAuthorization = sskts.factory.queueStatus.UNEXECUTED;
-            let queueStatus4gmoAuthorization = sskts.factory.queueStatus.UNEXECUTED;
-            let queueStatus4emailNotification = sskts.factory.queueStatus.UNEXECUTED;
-
-            let promises: Promise<void>[] = [];
-            promises = promises.concat(authorizations.map(async (authorization) => {
-                const queueDoc = await queueAdapter.model.findOne({
-                    group: sskts.factory.queueGroup.SETTLE_AUTHORIZATION,
-                    'authorization.id': authorization.id
-                }).exec();
-
-                switch (authorization.group) {
-                    case sskts.factory.authorizationGroup.COA_SEAT_RESERVATION:
-                        queueStatus4coaAuthorization = queueDoc.get('status');
-                        break;
-                    case sskts.factory.authorizationGroup.GMO:
-                        queueStatus4gmoAuthorization = queueDoc.get('status');
-                        break;
-                    default:
-                        break;
-                }
-            }));
-
-            promises = promises.concat(notifications.map(async (notification) => {
-                const queueDoc = await queueAdapter.model.findOne({
-                    group: sskts.factory.queueGroup.PUSH_NOTIFICATION,
-                    'notification.id': notification.id
-                }).exec();
-
-                switch (notification.group) {
-                    case sskts.factory.notificationGroup.EMAIL:
-                        queueStatus4emailNotification = queueDoc.get('status');
-                        break;
-                    default:
-                        break;
-                }
-            }));
-
-            await Promise.all(promises);
-
-            await pushMessage(MID, `メール送信:${queueStatus4emailNotification}
-本予約:${queueStatus4coaAuthorization}
-売上:${queueStatus4gmoAuthorization}`
-            );
 
             // キュー実行のボタン表示
             await request.post({
