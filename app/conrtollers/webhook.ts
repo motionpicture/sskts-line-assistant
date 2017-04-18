@@ -14,117 +14,139 @@ const debug = createDebug('sskts-linereport:controller:webhook');
 /**
  * メッセージが送信されたことを示すEvent Objectです。
  */
-// tslint:disable-next-line:max-func-body-length
+// tslint:disable-next-line:max-func-body-length cyclomatic-complexity
 export async function message(event: any) {
     const message: string = event.message.text;
     const MID = event.source.userId;
 
-    switch (true) {
-        case /^\d{1,8}$/.test(message):
-            // 取引検索
-            const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-            const performanceAdapter = sskts.adapter.performance(mongoose.connection);
-            const queueAdapter = sskts.adapter.queue(mongoose.connection);
-            const transactionDoc = await transactionAdapter.transactionModel.findOne({ 'inquiry_key.reserve_num': message })
-                .populate('owners').exec();
+    try {
 
-            if (transactionDoc === null) {
-                await pushMessage(MID, 'no transaction');
-                return;
-            }
+        switch (true) {
+            case /^\d{1,8}$/.test(message):
+                // 取引検索
+                const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+                const performanceAdapter = sskts.adapter.performance(mongoose.connection);
+                const queueAdapter = sskts.adapter.queue(mongoose.connection);
+                const transactionDoc = await transactionAdapter.transactionModel.findOne({ 'inquiry_key.reserve_num': message })
+                    .populate('owners').exec();
 
-            const transaction = sskts.factory.transaction.create(<any>transactionDoc.toObject());
-            debug(transaction);
-            const anonymousOwnerObject = transaction.owners.find((owner) => owner.group === sskts.factory.ownerGroup.ANONYMOUS);
-            if (anonymousOwnerObject === undefined) {
-                throw new Error('owner not found');
-            }
-            const anonymousOwner = sskts.factory.owner.anonymous.create(anonymousOwnerObject);
+                if (transactionDoc === null) {
+                    await pushMessage(MID, 'no transaction');
+                    return;
+                }
 
-            const authorizations = await transactionAdapter.findAuthorizationsById(transaction.id);
-            const notifications = await transactionAdapter.findNotificationsById(transaction.id);
+                const transaction = sskts.factory.transaction.create(<any>transactionDoc.toObject());
+                debug(transaction);
+                const anonymousOwnerObject = transaction.owners.find((owner) => owner.group === sskts.factory.ownerGroup.ANONYMOUS);
+                if (anonymousOwnerObject === undefined) {
+                    throw new Error('owner not found');
+                }
+                const anonymousOwner = sskts.factory.owner.anonymous.create(anonymousOwnerObject);
 
-            const gmoAuthorizationObject = authorizations.find((authorization) => {
-                return (authorization.owner_from === anonymousOwner.id && authorization.group === sskts.factory.authorizationGroup.GMO);
-            });
-            const gmoAuthorization = sskts.factory.authorization.gmo.create(<any>gmoAuthorizationObject);
+                const authorizations = await transactionAdapter.findAuthorizationsById(transaction.id);
+                const notifications = await transactionAdapter.findNotificationsById(transaction.id);
+                debug('authorizations:', authorizations);
 
-            const coaSeatReservationAuthorizationObject = authorizations.find((authorization) => {
-                return (
-                    authorization.owner_to === anonymousOwner.id &&
-                    authorization.group === sskts.factory.authorizationGroup.COA_SEAT_RESERVATION
-                );
-            });
-            const coaSeatReservationAuthorization =
-                sskts.factory.authorization.coaSeatReservation.create(<any>coaSeatReservationAuthorizationObject);
+                // GMOオーソリを取り出す
+                const gmoAuthorizationObject = authorizations.find((authorization) => {
+                    return (authorization.owner_from === anonymousOwner.id && authorization.group === sskts.factory.authorizationGroup.GMO);
+                });
+                const gmoAuthorization =
+                    // tslint:disable-next-line:max-line-length
+                    (gmoAuthorizationObject !== undefined) ? sskts.factory.authorization.gmo.create(<any>gmoAuthorizationObject) : undefined;
 
-            const performanceOption =
-                await sskts.service.master.findPerformance(coaSeatReservationAuthorization.assets[0].performance)(performanceAdapter);
-            if (performanceOption.isEmpty) {
-                throw new Error('performance not found');
-            }
-            const performance = performanceOption.get();
-            debug(performance);
+                // ムビチケオーソリを取り出す
+                const mvtkAuthorizationObject = authorizations.find((authorization) => {
+                    // tslint:disable-next-line:max-line-length
+                    return (authorization.owner_from === anonymousOwner.id && authorization.group === sskts.factory.authorizationGroup.MVTK);
+                });
+                const mvtkAuthorization =
+                    // tslint:disable-next-line:max-line-length
+                    (mvtkAuthorizationObject !== undefined) ? sskts.factory.authorization.mvtk.create(<any>mvtkAuthorizationObject) : undefined;
 
-            let coaAuthorizationSettledAt: Date | null = null;
-            let gmoAuthorizationSettledAt: Date | null = null;
-            let emailNotificationPushedAt: Date | null = null;
+                // 座席予約オーソリを取り出す
+                const coaSeatReservationAuthorizationObject = authorizations.find((authorization) => {
+                    return (
+                        authorization.owner_to === anonymousOwner.id &&
+                        authorization.group === sskts.factory.authorizationGroup.COA_SEAT_RESERVATION
+                    );
+                });
+                const coaSeatReservationAuthorization =
+                    // tslint:disable-next-line:max-line-length
+                    (coaSeatReservationAuthorizationObject !== undefined) ? sskts.factory.authorization.coaSeatReservation.create(<any>coaSeatReservationAuthorizationObject) : undefined;
 
-            if (transaction.status === sskts.factory.transactionStatus.CLOSED) {
+                if (coaSeatReservationAuthorization === undefined) {
+                    throw new Error('seat reservation not found');
+                }
 
-                let promises: Promise<void>[] = [];
-                promises = promises.concat(authorizations.map(async (authorization) => {
-                    const queueDoc = await queueAdapter.model.findOne({
-                        group: sskts.factory.queueGroup.SETTLE_AUTHORIZATION,
-                        'authorization.id': authorization.id
-                    }).exec();
+                // パフォーマンス情報取得
+                const performanceOption =
+                    await sskts.service.master.findPerformance(coaSeatReservationAuthorization.assets[0].performance)(performanceAdapter);
+                if (performanceOption.isEmpty) {
+                    throw new Error('performance not found');
+                }
+                const performance = performanceOption.get();
+                debug(performance);
 
-                    switch (authorization.group) {
-                        case sskts.factory.authorizationGroup.COA_SEAT_RESERVATION:
-                            if (queueDoc.get('status') === sskts.factory.queueStatus.EXECUTED) {
-                                coaAuthorizationSettledAt = <Date>queueDoc.get('last_tried_at');
-                            }
-                            break;
-                        case sskts.factory.authorizationGroup.GMO:
-                            if (queueDoc.get('status') === sskts.factory.queueStatus.EXECUTED) {
-                                gmoAuthorizationSettledAt = <Date>queueDoc.get('last_tried_at');
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                }));
+                // キューの実行日時を調べる
+                let coaAuthorizationSettledAt: Date | null = null;
+                let gmoAuthorizationSettledAt: Date | null = null;
+                let emailNotificationPushedAt: Date | null = null;
 
-                promises = promises.concat(notifications.map(async (notification) => {
-                    const queueDoc = await queueAdapter.model.findOne({
-                        group: sskts.factory.queueGroup.PUSH_NOTIFICATION,
-                        'notification.id': notification.id
-                    }).exec();
+                if (transaction.status === sskts.factory.transactionStatus.CLOSED) {
+                    let promises: Promise<void>[] = [];
+                    promises = promises.concat(authorizations.map(async (authorization) => {
+                        const queueDoc = await queueAdapter.model.findOne({
+                            group: sskts.factory.queueGroup.SETTLE_AUTHORIZATION,
+                            'authorization.id': authorization.id
+                        }).exec();
 
-                    switch (notification.group) {
-                        case sskts.factory.notificationGroup.EMAIL:
-                            if (queueDoc.get('status') === sskts.factory.queueStatus.EXECUTED) {
-                                emailNotificationPushedAt = <Date>queueDoc.get('last_tried_at');
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                }));
+                        switch (authorization.group) {
+                            case sskts.factory.authorizationGroup.COA_SEAT_RESERVATION:
+                                if (queueDoc.get('status') === sskts.factory.queueStatus.EXECUTED) {
+                                    coaAuthorizationSettledAt = <Date>queueDoc.get('last_tried_at');
+                                }
+                                break;
+                            case sskts.factory.authorizationGroup.GMO:
+                                if (queueDoc.get('status') === sskts.factory.queueStatus.EXECUTED) {
+                                    gmoAuthorizationSettledAt = <Date>queueDoc.get('last_tried_at');
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                    }));
 
-                await Promise.all(promises);
-            }
+                    promises = promises.concat(notifications.map(async (notification) => {
+                        const queueDoc = await queueAdapter.model.findOne({
+                            group: sskts.factory.queueGroup.PUSH_NOTIFICATION,
+                            'notification.id': notification.id
+                        }).exec();
 
-            const transactionDetails = `--------------------
+                        switch (notification.group) {
+                            case sskts.factory.notificationGroup.EMAIL:
+                                if (queueDoc.get('status') === sskts.factory.queueStatus.EXECUTED) {
+                                    emailNotificationPushedAt = <Date>queueDoc.get('last_tried_at');
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                    }));
+
+                    await Promise.all(promises);
+                }
+
+                const transactionDetails = `--------------------
 取引状況
 --------------------
-${(transaction.started_at instanceof Date) ? moment(transaction.started_at).format('YYYY-MM-DD HH:mm:ss') + ' 開始' : ''}
-${(transaction.closed_at instanceof Date) ? moment(transaction.closed_at).format('YYYY-MM-DD HH:mm:ss') + ' 成立' : ''}
-${(transaction.expired_at instanceof Date) ? moment(transaction.expired_at).format('YYYY-MM-DD HH:mm:ss') + ' 期限切れ' : ''}
-${(transaction.queues_exported_at instanceof Date) ? moment(transaction.queues_exported_at).format('YYYY-MM-DD HH:mm:ss') + ' キュー' : ''}
-${(emailNotificationPushedAt !== null) ? moment(emailNotificationPushedAt).format('YYYY-MM-DD HH:mm:ss') + ' メール送信' : ''}
-${(coaAuthorizationSettledAt !== null) ? moment(coaAuthorizationSettledAt).format('YYYY-MM-DD HH:mm:ss') + ' 本予約' : ''}
-${(gmoAuthorizationSettledAt !== null) ? moment(gmoAuthorizationSettledAt).format('YYYY-MM-DD HH:mm:ss') + ' 売上' : ''}
+${(transaction.started_at instanceof Date) ? moment(transaction.started_at).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 開始
+${(transaction.closed_at instanceof Date) ? moment(transaction.closed_at).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 成立
+${(transaction.expired_at instanceof Date) ? moment(transaction.expired_at).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 期限切れ
+${(transaction.queues_exported_at instanceof Date) ? moment(transaction.queues_exported_at).format('YYYY-MM-DD HH:mm:ss') + '' : ''} キュー
+${(emailNotificationPushedAt !== null) ? moment(emailNotificationPushedAt).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} メール送信
+${(coaAuthorizationSettledAt !== null) ? moment(coaAuthorizationSettledAt).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 本予約
+${(gmoAuthorizationSettledAt !== null) ? moment(gmoAuthorizationSettledAt).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 実売上
 --------------------
 購入者情報
 --------------------
@@ -132,95 +154,105 @@ ${anonymousOwner.name_first} ${anonymousOwner.name_last}
 ${anonymousOwner.email}
 ${anonymousOwner.tel}
 --------------------
-購入内容
+座席予約
 --------------------
 ${performance.film.name.ja}
 ${performance.day} ${performance.time_start}-${performance.time_end}
 @${performance.theater.name.ja} ${performance.screen.name.ja}
 ${coaSeatReservationAuthorization.assets.map((asset) => `●${asset.seat_code} ${asset.ticket_name_ja} ￥${asset.sale_price}`).join('\n')}
-￥${gmoAuthorization.price}
 --------------------
 GMO
 --------------------
-${gmoAuthorization.gmo_order_id}`
-                ;
+${(gmoAuthorization !== undefined) ? gmoAuthorization.gmo_order_id : ''}
+${(gmoAuthorization !== undefined) ? '￥' + gmoAuthorization.price.toString() : ''}
+--------------------
+ムビチケ
+--------------------
+${(mvtkAuthorization !== undefined) ? mvtkAuthorization.knyknr_no_info.map((knyknrNoInfo) => knyknrNoInfo.knyknr_no).join('、') : ''}
+`
+                    ;
 
-            await pushMessage(MID, transactionDetails);
+                await pushMessage(MID, transactionDetails);
 
-            if (transaction.inquiry_key !== undefined) {
-                // COAからQRを取得
-                const stateReserveResult = await COA.ReserveService.stateReserve(
-                    {
-                        theater_code: transaction.inquiry_key.theater_code,
-                        reserve_num: transaction.inquiry_key.reserve_num,
-                        tel_num: transaction.inquiry_key.tel
-                    }
-                );
-                debug(stateReserveResult);
-
-                // 本予約済みであればQRコード送信
-                if (stateReserveResult !== null) {
-                    stateReserveResult.list_ticket.forEach(async (ticket) => {
-                        // push message
-                        await request.post({
-                            simple: false,
-                            url: 'https://api.line.me/v2/bot/message/push',
-                            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-                            json: true,
-                            body: {
-                                to: MID,
-                                messages: [
-                                    {
-                                        type: 'image',
-                                        // tslint:disable-next-line:max-line-length
-                                        originalContentUrl: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`,
-                                        previewImageUrl: `https://chart.apis.google.com/chart?chs=150x150&cht=qr&chl=${ticket.seat_qrcode}`
-                                    }
-                                ]
-                            }
-                        }).promise();
-                    });
-                }
-            }
-
-            // キュー実行のボタン表示
-            await request.post({
-                simple: false,
-                url: 'https://api.line.me/v2/bot/message/push',
-                auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-                json: true,
-                body: {
-                    to: MID,
-                    messages: [
+                if (transaction.inquiry_key !== undefined) {
+                    // COAからQRを取得
+                    const stateReserveResult = await COA.ReserveService.stateReserve(
                         {
-                            type: 'template',
-                            altText: 'aaa',
-                            template: {
-                                type: 'buttons',
-                                text: 'キュー実行',
-                                actions: [
-                                    {
-                                        type: 'postback',
-                                        label: 'メール送信',
-                                        data: `action=pushNotification&transaction=${transaction.id}`
-                                    },
-                                    {
-                                        type: 'postback',
-                                        label: '本予約',
-                                        data: `action=transferCoaSeatReservationAuthorization&transaction=${transaction.id}`
-                                    }
-                                ]
-                            }
+                            theater_code: transaction.inquiry_key.theater_code,
+                            reserve_num: transaction.inquiry_key.reserve_num,
+                            tel_num: transaction.inquiry_key.tel
                         }
-                    ]
-                }
-            }).promise();
+                    );
+                    debug(stateReserveResult);
 
-            break;
-        default:
-            // 何もしない
-            // await pushMessage(MID, '???');
-            break;
+                    // 本予約済みであればQRコード送信
+                    if (stateReserveResult !== null) {
+                        stateReserveResult.list_ticket.forEach(async (ticket) => {
+                            // push message
+                            await request.post({
+                                simple: false,
+                                url: 'https://api.line.me/v2/bot/message/push',
+                                auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+                                json: true,
+                                body: {
+                                    to: MID,
+                                    messages: [
+                                        {
+                                            type: 'image',
+                                            // tslint:disable-next-line:max-line-length
+                                            originalContentUrl: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`,
+                                            previewImageUrl: `https://chart.apis.google.com/chart?chs=150x150&cht=qr&chl=${ticket.seat_qrcode}`
+                                        }
+                                    ]
+                                }
+                            }).promise();
+                        });
+                    }
+                }
+
+                // キュー実行のボタン表示
+                await request.post({
+                    simple: false,
+                    url: 'https://api.line.me/v2/bot/message/push',
+                    auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+                    json: true,
+                    body: {
+                        to: MID,
+                        messages: [
+                            {
+                                type: 'template',
+                                altText: 'aaa',
+                                template: {
+                                    type: 'buttons',
+                                    text: 'キュー実行',
+                                    actions: [
+                                        {
+                                            type: 'postback',
+                                            label: 'メール送信',
+                                            data: `action=pushNotification&transaction=${transaction.id}`
+                                        },
+                                        {
+                                            type: 'postback',
+                                            label: '本予約',
+                                            data: `action=transferCoaSeatReservationAuthorization&transaction=${transaction.id}`
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }).promise();
+
+                break;
+            default:
+                // 何もしない
+                // await pushMessage(MID, '???');
+                break;
+        }
+    } catch (error) {
+        console.error(error);
+        // エラーメッセージ表示
+        await pushMessage(MID, error.toString());
     }
 }
 
