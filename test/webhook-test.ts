@@ -80,4 +80,32 @@ describe('POST /webhook', () => {
                 done(err);
             });
     });
+
+    it('電話番号で検索', (done) => {
+        supertest(app)
+            .post('/webhook')
+            .send({
+                events: [
+                    {
+                        postback: {
+                            data: 'action=searchTransactionByTel&tel=09012345678'
+                        },
+                        replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
+                        source: {
+                            type: 'user',
+                            userId: 'U28fba84b4008d60291fc861e2562b34f'
+                        },
+                        timestamp: 1487085535998,
+                        type: 'postback'
+                    }
+                ]
+            })
+            .expect(HTTPStatus.OK)
+            .then((response) => {
+                assert.equal(response.text, 'ok');
+                done();
+            }).catch((err) => {
+                done(err);
+            });
+    });
 });

@@ -58,7 +58,7 @@ function postback(event) {
                     yield PostbackController.searchTransactionByReserveNum(userId, data.reserveNum);
                     break;
                 case 'searchTransactionByTel':
-                    yield PostbackController.searchTransactionByTel(userId, data.reserveNum);
+                    yield PostbackController.searchTransactionByTel(userId, data.tel);
                     break;
                 case 'pushNotification':
                     yield PostbackController.pushNotification(userId, data.transaction);

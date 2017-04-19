@@ -48,7 +48,14 @@ export async function searchTransactionByTel(userId: string, tel: string) {
 
     // 取引検索
     const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-    const transactionDoc = await transactionAdapter.transactionModel.findOne({ 'inquiry_key.tel': tel }, '_id').exec();
+    const transactionDoc = await transactionAdapter.transactionModel.findOne(
+        {
+            status: sskts.factory.transactionStatus.CLOSED,
+            'inquiry_key.tel': tel
+        }
+        ,
+        '_id'
+    ).exec();
 
     if (transactionDoc === null) {
         await pushMessage(userId, 'no transaction');

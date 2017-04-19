@@ -52,7 +52,7 @@ export async function postback(event: any) {
                 break;
 
             case 'searchTransactionByTel':
-                await PostbackController.searchTransactionByTel(userId, data.reserveNum);
+                await PostbackController.searchTransactionByTel(userId, data.tel);
                 break;
 
             case 'pushNotification':
