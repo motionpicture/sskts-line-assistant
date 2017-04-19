@@ -3,10 +3,10 @@
  *
  * @ignore
  */
-import * as createDebug from 'debug';
+
 import * as express from 'express';
+
 const router = express.Router();
-const debug = createDebug('sskts-linereport:*');
 
 // middleware that is specific to this router
 // router.use((req, res, next) => {
@@ -14,8 +14,7 @@ const debug = createDebug('sskts-linereport:*');
 //   next()
 // })
 
-router.get('/environmentVariables', (req, res) => {
-    debug('ip:', req.ip);
+router.get('/environmentVariables', (__, res) => {
     res.json({
         data: {
             type: 'envs',

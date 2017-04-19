@@ -50,14 +50,15 @@
   "repository": {},
   "scripts": {
     "build": "tsc",
-    "check": "tslint --type-check --project tsconfig.json -c tslint.json app/**/*.ts server.ts && nsp check && snyk auth && snyk test --ignore-policy",
+    "check": "npm run tslint && nsp check && snyk auth && snyk test --ignore-policy",
     "clean": "rimraf app/**/*.js bin/**/*.js test/**/*.js docs/**/* npm-debug.log*",
     "jsdoc": "node_modules/.bin/jsdoc -c jsdoc.json",
     "start": "node server.js",
     "test": "npm run check && mocha --no-timeouts --recursive",
+    "tslint": "tslint --type-check --project tsconfig.json -c tslint.json app/**/*.ts server.ts",
     "preversion": "npm run clean && npm run build && npm test",
     "version": "git add -A",
     "postversion": "git push origin"
   },
-  "version": "1.0.6"
+  "version": "1.0.7"
 }
