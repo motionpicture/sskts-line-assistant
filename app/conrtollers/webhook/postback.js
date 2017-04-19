@@ -30,6 +30,7 @@ function searchTransactionByReserveNum(userId, reserveNum) {
         // 取引検索
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         const transactionDoc = yield transactionAdapter.transactionModel.findOne({
+            // tslint:disable-next-line:no-magic-numbers
             'inquiry_key.reserve_num': parseInt(reserveNum, 10)
         }, '_id').exec();
         if (transactionDoc === null) {
@@ -212,26 +213,35 @@ ${(mvtkAuthorization !== undefined) ? mvtkAuthorization.knyknr_no_info.map((knyk
             debug(stateReserveResult);
             // 本予約済みであればQRコード送信
             if (stateReserveResult !== null) {
-                stateReserveResult.list_ticket.forEach((ticket) => __awaiter(this, void 0, void 0, function* () {
+                const qrCodesBySeatCode = stateReserveResult.list_ticket.map((ticket) => {
+                    return {
+                        seat_code: ticket.seat_num,
+                        qr: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`
+                    };
                     // push message
-                    yield request.post({
-                        simple: false,
-                        url: 'https://api.line.me/v2/bot/message/push',
-                        auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-                        json: true,
-                        body: {
-                            to: userId,
-                            messages: [
-                                {
-                                    type: 'image',
-                                    // tslint:disable-next-line:max-line-length
-                                    originalContentUrl: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`,
-                                    previewImageUrl: `https://chart.apis.google.com/chart?chs=150x150&cht=qr&chl=${ticket.seat_qrcode}`
-                                }
-                            ]
-                        }
-                    }).promise();
-                }));
+                    // await request.post({
+                    //     simple: false,
+                    //     url: 'https://api.line.me/v2/bot/message/push',
+                    //     auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+                    //     json: true,
+                    //     body: {
+                    //         to: userId,
+                    //         messages: [
+                    //             {
+                    //                 type: 'image',
+                    //                 // tslint:disable-next-line:max-line-length
+                    //                 originalContentUrl: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`,
+                    //                 previewImageUrl: `https://chart.apis.google.com/chart?chs=150x150&cht=qr&chl=${ticket.seat_qrcode}`
+                    //             }
+                    //         ]
+                    //     }
+                    // }).promise();
+                });
+                yield pushMessage(userId, `--------------------
+QRコード
+--------------------
+${qrCodesBySeatCode.map((qrCode) => '●' + qrCode.seat_code + ' ' + qrCode.qr).join('\n')}
+`);
             }
         }
         // キュー実行のボタン表示
