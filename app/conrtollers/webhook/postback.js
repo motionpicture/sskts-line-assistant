@@ -28,12 +28,12 @@ function searchTransactionByReserveNum(userId, reserveNum) {
     return __awaiter(this, void 0, void 0, function* () {
         // 取引検索
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-        const transactionDoc = yield transactionAdapter.transactionModel.findOne({ 'inquiry_key.reserve_num': reserveNum }, 'id').exec();
+        const transactionDoc = yield transactionAdapter.transactionModel.findOne({ 'inquiry_key.reserve_num': reserveNum }, '_id').exec();
         if (transactionDoc === null) {
             yield pushMessage(userId, 'no transaction');
             return;
         }
-        yield pushTransactionDetails(userId, transactionDoc.get('id'));
+        yield pushTransactionDetails(userId, transactionDoc.get('_id').toString());
     });
 }
 exports.searchTransactionByReserveNum = searchTransactionByReserveNum;
@@ -49,12 +49,12 @@ function searchTransactionByTel(userId, tel) {
         yield pushMessage(userId, '実験実装中...');
         // 取引検索
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-        const transactionDoc = yield transactionAdapter.transactionModel.findOne({ 'inquiry_key.tel': tel }, 'id').exec();
+        const transactionDoc = yield transactionAdapter.transactionModel.findOne({ 'inquiry_key.tel': tel }, '_id').exec();
         if (transactionDoc === null) {
             yield pushMessage(userId, 'no transaction');
             return;
         }
-        yield pushTransactionDetails(userId, transactionDoc.get('id'));
+        yield pushTransactionDetails(userId, transactionDoc.get('_id').toString());
     });
 }
 exports.searchTransactionByTel = searchTransactionByTel;

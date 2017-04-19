@@ -21,7 +21,7 @@ export async function message(event: any) {
 
     try {
         switch (true) {
-            case /^\d{1,8}$/.test(message):
+            case /^\d{1,12}$/.test(message):
                 await MessageController.pushButtonsReserveNumOrTel(userId, message);
                 break;
 

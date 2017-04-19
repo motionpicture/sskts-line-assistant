@@ -27,7 +27,7 @@ function message(event) {
         const userId = event.source.userId;
         try {
             switch (true) {
-                case /^\d{1,8}$/.test(message):
+                case /^\d{1,12}$/.test(message):
                     yield MessageController.pushButtonsReserveNumOrTel(userId, message);
                     break;
                 default:

@@ -20,14 +20,14 @@ const debug = createDebug('sskts-linereport:controller:webhook:postback');
 export async function searchTransactionByReserveNum(userId: string, reserveNum: string) {
     // 取引検索
     const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-    const transactionDoc = await transactionAdapter.transactionModel.findOne({ 'inquiry_key.reserve_num': reserveNum }, 'id').exec();
+    const transactionDoc = await transactionAdapter.transactionModel.findOne({ 'inquiry_key.reserve_num': reserveNum }, '_id').exec();
 
     if (transactionDoc === null) {
         await pushMessage(userId, 'no transaction');
         return;
     }
 
-    await pushTransactionDetails(userId, transactionDoc.get('id'));
+    await pushTransactionDetails(userId, transactionDoc.get('_id').toString());
 }
 
 /**
@@ -42,14 +42,14 @@ export async function searchTransactionByTel(userId: string, tel: string) {
 
     // 取引検索
     const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-    const transactionDoc = await transactionAdapter.transactionModel.findOne({ 'inquiry_key.tel': tel }, 'id').exec();
+    const transactionDoc = await transactionAdapter.transactionModel.findOne({ 'inquiry_key.tel': tel }, '_id').exec();
 
     if (transactionDoc === null) {
         await pushMessage(userId, 'no transaction');
         return;
     }
 
-    await pushTransactionDetails(userId, transactionDoc.get('id'));
+    await pushTransactionDetails(userId, transactionDoc.get('_id').toString());
 }
 
 /**
