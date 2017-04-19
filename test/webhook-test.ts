@@ -31,7 +31,7 @@ describe('POST /webhook', () => {
                     {
                         message: {
                             id: '5647872913345',
-                            text: '1610',
+                            text: '1616',
                             type: 'text'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
@@ -41,6 +41,34 @@ describe('POST /webhook', () => {
                         },
                         timestamp: 1487085535998,
                         type: 'message'
+                    }
+                ]
+            })
+            .expect(HTTPStatus.OK)
+            .then((response) => {
+                assert.equal(response.text, 'ok');
+                done();
+            }).catch((err) => {
+                done(err);
+            });
+    });
+
+    it('予約番号で検索', (done) => {
+        supertest(app)
+            .post('/webhook')
+            .send({
+                events: [
+                    {
+                        postback: {
+                            data: 'action=searchTransactionByReserveNum&reserveNum=1616'
+                        },
+                        replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
+                        source: {
+                            type: 'user',
+                            userId: 'U28fba84b4008d60291fc861e2562b34f'
+                        },
+                        timestamp: 1487085535998,
+                        type: 'postback'
                     }
                 ]
             })

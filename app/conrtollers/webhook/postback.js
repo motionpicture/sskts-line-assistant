@@ -26,9 +26,12 @@ const debug = createDebug('sskts-linereport:controller:webhook:postback');
  */
 function searchTransactionByReserveNum(userId, reserveNum) {
     return __awaiter(this, void 0, void 0, function* () {
+        debug(userId, reserveNum);
         // 取引検索
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-        const transactionDoc = yield transactionAdapter.transactionModel.findOne({ 'inquiry_key.reserve_num': reserveNum }, '_id').exec();
+        const transactionDoc = yield transactionAdapter.transactionModel.findOne({
+            'inquiry_key.reserve_num': parseInt(reserveNum, 10)
+        }, '_id').exec();
         if (transactionDoc === null) {
             yield pushMessage(userId, 'no transaction');
             return;
@@ -46,7 +49,7 @@ exports.searchTransactionByReserveNum = searchTransactionByReserveNum;
 function searchTransactionByTel(userId, tel) {
     return __awaiter(this, void 0, void 0, function* () {
         debug('tel:', tel);
-        yield pushMessage(userId, '実験実装中...');
+        yield pushMessage(userId, '実験実装中です...');
         // 取引検索
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         const transactionDoc = yield transactionAdapter.transactionModel.findOne({ 'inquiry_key.tel': tel }, '_id').exec();
