@@ -14,15 +14,26 @@ const debug = createDebug('sskts-linereport:controller:webhook');
 /**
  * メッセージが送信されたことを示すEvent Objectです。
  */
-// tslint:disable-next-line:max-func-body-length cyclomatic-complexity
 export async function message(event: any) {
     const message: string = event.message.text;
     const userId = event.source.userId;
 
     try {
         switch (true) {
+            // 予約番号or電話番号で検索
             case /^\d{1,12}$/.test(message):
                 await MessageController.pushButtonsReserveNumOrTel(userId, message);
+                break;
+
+            // 取引csv要求
+            case /^csv$/.test(message):
+                await MessageController.askFromWhenAndToWhen(userId);
+                break;
+
+            // 取引csv期間指定
+            case /^\d{8}-\d{8}$/.test(message):
+                // tslint:disable-next-line:no-magic-numbers
+                await MessageController.publishURI4transactionsCSV(userId, message.substr(0, 8), message.substr(9, 8));
                 break;
 
             default:
@@ -39,7 +50,6 @@ export async function message(event: any) {
 /**
  * イベントの送信元が、template messageに付加されたポストバックアクションを実行したことを示すevent objectです。
  */
-// tslint:disable-next-line:max-func-body-length
 export async function postback(event: any) {
     const data = querystring.parse(event.postback.data);
     debug('data:', data);

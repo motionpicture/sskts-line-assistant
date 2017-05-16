@@ -66,6 +66,7 @@ npmでローカルサーバーを起動。
     set GMO_ENDPOINT=**********
     set COA_ENDPOINT=**********
     set COA_REFRESH_TOKEN=**********
+    set AZURE_STORAGE_CONNECTION_STRING=**********csv保管azure storage接続文字列**********
 ```
 
 only on Aure WebApps
