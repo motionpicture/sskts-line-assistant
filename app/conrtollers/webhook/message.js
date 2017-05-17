@@ -148,7 +148,7 @@ function publishURI4transactionsCSV(userId, dateFrom, dateTo) {
                 gmoOrderId: `${(gmoAuthorization !== undefined) ? gmoAuthorization.gmo_order_id : ''}`,
                 gmoPrice: `${(gmoAuthorization !== undefined) ? gmoAuthorization.price.toString() : ''}`,
                 // tslint:disable-next-line:max-line-length
-                mvtkKnyknrNos: `${(mvtkAuthorization !== undefined) ? mvtkAuthorization.knyknr_no_info.map((knyknrNoInfo) => knyknrNoInfo.knyknr_no).join(',') : ''}`,
+                mvtkKnyknrNos: `${(mvtkAuthorization !== undefined) ? mvtkAuthorization.knyknr_no_info.map((knyknrNoInfo) => knyknrNoInfo.knyknr_no).join('|') : ''}`,
                 mvtkPrice: `${(mvtkAuthorization !== undefined) ? mvtkAuthorization.price.toString() : ''}`
             };
         })));
