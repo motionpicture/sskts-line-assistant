@@ -210,7 +210,7 @@ ${anonymousOwner.tel}
 ${performance.film.name.ja}
 ${performance.day} ${performance.time_start}-${performance.time_end}
 @${performance.theater.name.ja} ${performance.screen.name.ja}
-${coaSeatReservationAuthorization.assets.map((asset) => `●${asset.seat_code} ${asset.ticket_name_ja} ￥${asset.sale_price}`).join('\n')}
+${coaSeatReservationAuthorization.assets.map((asset) => `●${asset.seat_code} ${asset.ticket_name.ja} ￥${asset.sale_price}`).join('\n')}
 --------------------
 GMO
 --------------------
