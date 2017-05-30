@@ -188,6 +188,7 @@ async function pushTransactionDetails(userId: string, transactionId: string) {
         await Promise.all(promises);
     }
 
+    // .jaを取り出している部分は多言語スキーマを取り入れる以前との互換性維持のため、undefinedチェックをしている
     const transactionDetails = `--------------------
 取引状況
 --------------------
@@ -207,10 +208,13 @@ ${anonymousOwner.tel}
 --------------------
 座席予約
 --------------------
-${performance.film.name.ja}
+${(performance.film.name !== undefined) ? performance.film.name.ja : ''}
 ${performance.day} ${performance.time_start}-${performance.time_end}
-@${performance.theater.name.ja} ${performance.screen.name.ja}
-${coaSeatReservationAuthorization.assets.map((asset) => `●${asset.seat_code} ${asset.ticket_name.ja} ￥${asset.sale_price}`).join('\n')}
+@${(performance.theater.name !== undefined) ? performance.theater.name.ja : ''}
+${(performance.screen.name !== undefined) ? performance.screen.name.ja : ''}
+${coaSeatReservationAuthorization.assets.map(
+            (asset) => `●${asset.seat_code} ${(asset.ticket_name !== undefined) ? asset.ticket_name.ja : ''} ￥${asset.sale_price}`
+        ).join('\n')}
 --------------------
 GMO
 --------------------

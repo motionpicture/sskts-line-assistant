@@ -11,8 +11,8 @@ import * as supertest from 'supertest';
 import * as app from '../../app/app';
 
 describe('POST /webhook', () => {
-    it('csv要求', (done) => {
-        supertest(app)
+    it('csv要求', async () => {
+        await supertest(app)
             .post('/webhook')
             .send({
                 events: [
@@ -35,14 +35,11 @@ describe('POST /webhook', () => {
             .expect(HTTPStatus.OK)
             .then((response) => {
                 assert.equal(response.text, 'ok');
-                done();
-            }).catch((err) => {
-                done(err);
             });
     });
 
-    it('csv期間指定', (done) => {
-        supertest(app)
+    it('csv期間指定', async () => {
+        await supertest(app)
             .post('/webhook')
             .send({
                 events: [
@@ -65,9 +62,6 @@ describe('POST /webhook', () => {
             .expect(HTTPStatus.OK)
             .then((response) => {
                 assert.equal(response.text, 'ok');
-                done();
-            }).catch((err) => {
-                done(err);
             });
     });
 });

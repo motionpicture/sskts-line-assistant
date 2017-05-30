@@ -4,25 +4,30 @@
  *
  * @ignore
  */
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const assert = require("assert");
 const HTTPStatus = require("http-status");
 const supertest = require("supertest");
 const app = require("../app/app");
 describe('POST /webhook', () => {
-    it('found', (done) => {
-        supertest(app)
+    it('found', () => __awaiter(this, void 0, void 0, function* () {
+        yield supertest(app)
             .post('/webhook')
             .expect(HTTPStatus.OK)
             .then((response) => {
             assert.equal(response.text, 'ok');
-            done();
-        }).catch((err) => {
-            done(err);
         });
-    });
-    it('予約番号メッセージ受信', (done) => {
-        supertest(app)
+    }));
+    it('予約番号メッセージ受信', () => __awaiter(this, void 0, void 0, function* () {
+        yield supertest(app)
             .post('/webhook')
             .send({
             events: [
@@ -45,13 +50,10 @@ describe('POST /webhook', () => {
             .expect(HTTPStatus.OK)
             .then((response) => {
             assert.equal(response.text, 'ok');
-            done();
-        }).catch((err) => {
-            done(err);
         });
-    });
-    it('予約番号で検索', (done) => {
-        supertest(app)
+    }));
+    it('予約番号で検索', () => __awaiter(this, void 0, void 0, function* () {
+        yield supertest(app)
             .post('/webhook')
             .send({
             events: [
@@ -72,13 +74,10 @@ describe('POST /webhook', () => {
             .expect(HTTPStatus.OK)
             .then((response) => {
             assert.equal(response.text, 'ok');
-            done();
-        }).catch((err) => {
-            done(err);
         });
-    });
-    it('電話番号で検索', (done) => {
-        supertest(app)
+    }));
+    it('電話番号で検索', () => __awaiter(this, void 0, void 0, function* () {
+        yield supertest(app)
             .post('/webhook')
             .send({
             events: [
@@ -99,9 +98,6 @@ describe('POST /webhook', () => {
             .expect(HTTPStatus.OK)
             .then((response) => {
             assert.equal(response.text, 'ok');
-            done();
-        }).catch((err) => {
-            done(err);
         });
-    });
+    }));
 });

@@ -11,20 +11,17 @@ import * as supertest from 'supertest';
 import * as app from '../app/app';
 
 describe('POST /webhook', () => {
-    it('found', (done) => {
-        supertest(app)
+    it('found', async () => {
+        await supertest(app)
             .post('/webhook')
             .expect(HTTPStatus.OK)
             .then((response) => {
                 assert.equal(response.text, 'ok');
-                done();
-            }).catch((err) => {
-                done(err);
             });
     });
 
-    it('予約番号メッセージ受信', (done) => {
-        supertest(app)
+    it('予約番号メッセージ受信', async () => {
+        await supertest(app)
             .post('/webhook')
             .send({
                 events: [
@@ -47,14 +44,11 @@ describe('POST /webhook', () => {
             .expect(HTTPStatus.OK)
             .then((response) => {
                 assert.equal(response.text, 'ok');
-                done();
-            }).catch((err) => {
-                done(err);
             });
     });
 
-    it('予約番号で検索', (done) => {
-        supertest(app)
+    it('予約番号で検索', async () => {
+        await supertest(app)
             .post('/webhook')
             .send({
                 events: [
@@ -75,14 +69,11 @@ describe('POST /webhook', () => {
             .expect(HTTPStatus.OK)
             .then((response) => {
                 assert.equal(response.text, 'ok');
-                done();
-            }).catch((err) => {
-                done(err);
             });
     });
 
-    it('電話番号で検索', (done) => {
-        supertest(app)
+    it('電話番号で検索', async () => {
+        await supertest(app)
             .post('/webhook')
             .send({
                 events: [
@@ -103,9 +94,6 @@ describe('POST /webhook', () => {
             .expect(HTTPStatus.OK)
             .then((response) => {
                 assert.equal(response.text, 'ok');
-                done();
-            }).catch((err) => {
-                done(err);
             });
     });
 });
