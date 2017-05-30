@@ -169,6 +169,9 @@ function pushTransactionDetails(userId, transactionId) {
             })));
             yield Promise.all(promises);
         }
+        // tslint:disable-next-line:max-line-length
+        const performanceDatetimeStr = `${moment(performance.day, 'YYYYMMDD').format('YYYY/MM/DD')} ${moment(performance.time_start, 'HHmm').format('HH:mm')}-${moment(performance.time_end, 'HHmm').format('HH:mm')}`;
+        const ticketsStr = coaSeatReservationAuthorization.assets.map((asset) => `●${asset.seat_code} ${(asset.ticket_name !== undefined) ? asset.ticket_name.ja : ''} ￥${asset.sale_price}`).join('\n');
         // .jaを取り出している部分は多言語スキーマを取り入れる以前との互換性維持のため、undefinedチェックをしている
         const transactionDetails = `--------------------
 取引状況
@@ -190,9 +193,9 @@ ${anonymousOwner.tel}
 座席予約
 --------------------
 ${performance.film.name.ja}
-${performance.day} ${performance.time_start}-${performance.time_end}
+${performanceDatetimeStr}
 @${performance.theater.name.ja} ${performance.screen.name.ja}
-${coaSeatReservationAuthorization.assets.map((asset) => `●${asset.seat_code} ${(asset.ticket_name !== undefined) ? asset.ticket_name.ja : ''} ￥${asset.sale_price}`).join('\n')}
+${ticketsStr}
 --------------------
 GMO
 --------------------
