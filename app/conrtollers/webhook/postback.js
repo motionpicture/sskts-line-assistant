@@ -189,10 +189,9 @@ ${anonymousOwner.tel}
 --------------------
 座席予約
 --------------------
-${(performance.film.name !== undefined) ? performance.film.name.ja : ''}
+${performance.film.name.ja}
 ${performance.day} ${performance.time_start}-${performance.time_end}
-@${(performance.theater.name !== undefined) ? performance.theater.name.ja : ''}
-${(performance.screen.name !== undefined) ? performance.screen.name.ja : ''}
+@${performance.theater.name.ja} ${performance.screen.name.ja}
 ${coaSeatReservationAuthorization.assets.map((asset) => `●${asset.seat_code} ${(asset.ticket_name !== undefined) ? asset.ticket_name.ja : ''} ￥${asset.sale_price}`).join('\n')}
 --------------------
 GMO
@@ -202,7 +201,7 @@ ${(gmoAuthorization !== undefined) ? '￥' + gmoAuthorization.price.toString() :
 --------------------
 ムビチケ
 --------------------
-${(mvtkAuthorization !== undefined) ? mvtkAuthorization.knyknr_no_info.map((knyknrNoInfo) => knyknrNoInfo.knyknr_no).join('、') : ''}
+${(mvtkAuthorization !== undefined) ? mvtkAuthorization.knyknr_no_info.map((knyknrNoInfo) => knyknrNoInfo.knyknr_no).join('\n') : ''}
 `;
         yield pushMessage(userId, transactionDetails);
         if (transaction.inquiry_key !== undefined) {
