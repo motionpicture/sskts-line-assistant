@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 
+## v1.1.3 - 2017-05-31
+### Fixed
+- 多言語スキーマを追加したことに対する互換性対応。
+
 ## v1.1.2 - 2017-05-17
 ### Fixed
 - csvダウンロードにて、ムビチケ購入管理番号表示が崩れるバグを修正。
