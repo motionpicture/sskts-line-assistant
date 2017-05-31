@@ -82,7 +82,7 @@ export async function publishURI4transactionsCSV(userId: string, dateFrom: strin
             status: sskts.factory.transactionStatus.CLOSED,
             closed_at: {
                 $gte: moment(dateFrom, 'YYYYMMDD').toDate(),
-                $lte: moment(dateTo, 'YYYYMMDD').toDate()
+                $lt: moment(dateTo, 'YYYYMMDD').add(1, 'days').toDate()
             }
         }
     ).populate('owners').exec();
@@ -141,8 +141,15 @@ export async function publishURI4transactionsCSV(userId: string, dateFrom: strin
             throw new Error('seat reservation not found');
         }
 
+        // 成立済みの取引なので、照会キーがないことは実際ありえない
+        if (transaction.inquiry_key === undefined) {
+            throw new Error('inquiry_key undefined');
+        }
+
         return {
             id: transaction.id,
+            theater: transaction.inquiry_key.theater_code,
+            reserveNum: transaction.inquiry_key.reserve_num,
             closedAt: moment(transaction.closed_at).format('YYYY-MM-DD HH:mm:ss'),
             name: `${anonymousOwner.name_first} ${anonymousOwner.name_last}`,
             email: anonymousOwner.email,
@@ -161,6 +168,8 @@ export async function publishURI4transactionsCSV(userId: string, dateFrom: strin
     const jconv = require('jconv');
     const columns = <any>{
         id: '取引ID',
+        theater: '劇場コード',
+        reserveNum: '予約番号',
         closedAt: '成立日時',
         name: '名前',
         email: 'メールアドレス',
