@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 
+## v1.1.4 - 2017-06-01
+### Added
+- csvの項目に劇場コードと予約番号を追加。
+
+### Fixed
+- csvの検索日時toが結果に含まれないバグを修正。
+
 ## v1.1.3 - 2017-05-31
 ### Fixed
 - 多言語スキーマを追加したことに対する互換性対応。
