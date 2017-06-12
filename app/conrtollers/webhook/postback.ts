@@ -87,7 +87,7 @@ async function pushTransactionDetails(userId: string, transactionId: string) {
     }
 
     const transaction = sskts.factory.transaction.create(<any>transactionDoc.toObject());
-    debug(transaction);
+    debug('transaction:', transaction);
     const anonymousOwnerObject = transaction.owners.find((owner) => owner.group === sskts.factory.ownerGroup.ANONYMOUS);
     if (anonymousOwnerObject === undefined) {
         throw new Error('owner not found');
@@ -151,6 +151,11 @@ async function pushTransactionDetails(userId: string, transactionId: string) {
                 group: sskts.factory.queueGroup.SETTLE_AUTHORIZATION,
                 'authorization.id': authorization.id
             }).exec();
+            debug('queueDoc:', queueDoc);
+
+            if (queueDoc === null) {
+                return;
+            }
 
             switch (authorization.group) {
                 case sskts.factory.authorizationGroup.COA_SEAT_RESERVATION:
@@ -174,6 +179,10 @@ async function pushTransactionDetails(userId: string, transactionId: string) {
                 'notification.id': notification.id
             }).exec();
 
+            if (queueDoc === null) {
+                return;
+            }
+
             switch (notification.group) {
                 case sskts.factory.notificationGroup.EMAIL:
                     if (queueDoc.get('status') === sskts.factory.queueStatus.EXECUTED) {
@@ -188,6 +197,32 @@ async function pushTransactionDetails(userId: string, transactionId: string) {
         await Promise.all(promises);
     }
 
+    let qrCodesBySeatCode: {
+        seat_code: string;
+        qr: string;
+    }[] = [];
+    if (transaction.inquiry_key !== undefined) {
+        // COAからQRを取得
+        const stateReserveResult = await COA.ReserveService.stateReserve(
+            {
+                theater_code: transaction.inquiry_key.theater_code,
+                reserve_num: transaction.inquiry_key.reserve_num,
+                tel_num: transaction.inquiry_key.tel
+            }
+        );
+        debug(stateReserveResult);
+
+        // 本予約済みであればQRコード送信
+        if (stateReserveResult !== null) {
+            qrCodesBySeatCode = stateReserveResult.list_ticket.map((ticket) => {
+                return {
+                    seat_code: ticket.seat_num,
+                    qr: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`
+                };
+            });
+        }
+    }
+
     // tslint:disable-next-line:max-line-length
     const performanceDatetimeStr = `${moment(performance.day, 'YYYYMMDD').format('YYYY/MM/DD')} ${moment(performance.time_start, 'HHmm').format('HH:mm')}-${moment(performance.time_end, 'HHmm').format('HH:mm')}`;
     const ticketsStr = coaSeatReservationAuthorization.assets.map(
@@ -195,6 +230,12 @@ async function pushTransactionDetails(userId: string, transactionId: string) {
     ).join('\n');
     // .jaを取り出している部分は多言語スキーマを取り入れる以前との互換性維持のため、undefinedチェックをしている
     const transactionDetails = `--------------------
+取引概要
+--------------------
+ID:${transaction.id}
+${(transaction.inquiry_key !== undefined) ? `予約番号:${transaction.inquiry_key.reserve_num}` : ''}
+${(transaction.inquiry_key !== undefined) ? `劇場:${transaction.inquiry_key.theater_code}` : ''}
+--------------------
 取引状況
 --------------------
 ${(transaction.started_at instanceof Date) ? moment(transaction.started_at).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 開始
@@ -220,62 +261,21 @@ ${ticketsStr}
 --------------------
 GMO
 --------------------
-${(gmoAuthorization !== undefined) ? gmoAuthorization.gmo_order_id : ''}
+${(gmoAuthorization !== undefined) ? `@${gmoAuthorization.gmo_shop_id}` : ''}
+${(gmoAuthorization !== undefined) ? `#${gmoAuthorization.gmo_order_id}` : ''}
 ${(gmoAuthorization !== undefined) ? '￥' + gmoAuthorization.price.toString() : ''}
 --------------------
 ムビチケ
 --------------------
 ${(mvtkAuthorization !== undefined) ? mvtkAuthorization.knyknr_no_info.map((knyknrNoInfo) => knyknrNoInfo.knyknr_no).join('\n') : ''}
+--------------------
+QRコード
+--------------------
+${qrCodesBySeatCode.map((qrCode) => '●' + qrCode.seat_code + ' ' + qrCode.qr).join('\n')}
 `
         ;
 
     await pushMessage(userId, transactionDetails);
-
-    if (transaction.inquiry_key !== undefined) {
-        // COAからQRを取得
-        const stateReserveResult = await COA.ReserveService.stateReserve(
-            {
-                theater_code: transaction.inquiry_key.theater_code,
-                reserve_num: transaction.inquiry_key.reserve_num,
-                tel_num: transaction.inquiry_key.tel
-            }
-        );
-        debug(stateReserveResult);
-
-        // 本予約済みであればQRコード送信
-        if (stateReserveResult !== null) {
-            const qrCodesBySeatCode = stateReserveResult.list_ticket.map((ticket) => {
-                return {
-                    seat_code: ticket.seat_num,
-                    qr: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`
-                };
-                // push message
-                // await request.post({
-                //     simple: false,
-                //     url: 'https://api.line.me/v2/bot/message/push',
-                //     auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-                //     json: true,
-                //     body: {
-                //         to: userId,
-                //         messages: [
-                //             {
-                //                 type: 'image',
-                //                 // tslint:disable-next-line:max-line-length
-                //                 originalContentUrl: `https://chart.apis.google.com/chart?chs=400x400&cht=qr&chl=${ticket.seat_qrcode}`,
-                //                 previewImageUrl: `https://chart.apis.google.com/chart?chs=150x150&cht=qr&chl=${ticket.seat_qrcode}`
-                //             }
-                //         ]
-                //     }
-                // }).promise();
-            });
-
-            await pushMessage(userId, `--------------------
-QRコード
---------------------
-${qrCodesBySeatCode.map((qrCode) => '●' + qrCode.seat_code + ' ' + qrCode.qr).join('\n')}
-`);
-        }
-    }
 
     // キュー実行のボタン表示
     await request.post({
@@ -388,7 +388,8 @@ export async function transferCoaSeatReservationAuthorization(userId: string, tr
             case sskts.factory.authorizationGroup.COA_SEAT_RESERVATION:
                 await sskts.service.stock.transferCOASeatReservation(<any>authorization)(
                     sskts.adapter.asset(mongoose.connection),
-                    sskts.adapter.owner(mongoose.connection)
+                    sskts.adapter.owner(mongoose.connection),
+                    sskts.adapter.performance(mongoose.connection)
                 );
                 break;
             default:

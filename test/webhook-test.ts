@@ -28,7 +28,7 @@ describe('POST /webhook', () => {
                     {
                         message: {
                             id: '5647872913345',
-                            text: '1616',
+                            text: '2161',
                             type: 'text'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
@@ -54,7 +54,7 @@ describe('POST /webhook', () => {
                 events: [
                     {
                         postback: {
-                            data: 'action=searchTransactionByReserveNum&reserveNum=1616'
+                            data: 'action=searchTransactionByReserveNum&reserveNum=2161'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
                         source: {

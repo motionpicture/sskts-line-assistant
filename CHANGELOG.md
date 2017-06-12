@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 
+## v1.1.5 - 2017-06-12
+### Added
+- 取引詳細にGMOショップ情報を追加。
+
+### Changed
+- 取引詳細テンプレート調整。
+
 ## v1.1.4 - 2017-06-01
 ### Added
 - csvの項目に劇場コードと予約番号を追加。

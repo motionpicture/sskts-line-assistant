@@ -10,7 +10,7 @@
   ],
   "config": {},
   "dependencies": {
-    "@motionpicture/sskts-domain": "^13.0.1",
+    "@motionpicture/sskts-domain": "^18.0.0",
     "azure-storage": "^2.1.0",
     "body-parser": "^1.17.1",
     "csv-stringify": "^1.0.4",
@@ -38,7 +38,7 @@
     "mocha": "^3.4.1",
     "nsp": "^2.6.3",
     "rimraf": "^2.6.1",
-    "snyk": "^1.32.0",
+    "snyk": "^1.34.3",
     "supertest": "^3.0.0",
     "tslint": "^4.5.1",
     "tslint-microsoft-contrib": "^4.0.1",
@@ -56,7 +56,7 @@
   "scripts": {
     "build": "tsc",
     "check": "npm run tslint && nsp check",
-    "clean": "rimraf app/**/*.js bin/**/*.js test/**/*.js docs/**/* npm-debug.log*",
+    "clean": "rimraf app/**/*.js bin/**/*.js test/**/*.js docs/**/* server.js npm-debug.log*",
     "jsdoc": "node_modules/.bin/jsdoc -c jsdoc.json",
     "mocha": "mocha",
     "snyk": "snyk auth && snyk test --ignore-policy",
@@ -67,5 +67,5 @@
     "version": "git add -A",
     "postversion": "git push origin --tags"
   },
-  "version": "1.1.4"
+  "version": "1.1.5"
 }
