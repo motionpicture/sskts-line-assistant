@@ -7,7 +7,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
+
+## v1.2.0 - 2017-06-26
+### Changed
 - 予約照会条件に劇場コード追加
+
+### Security
+- [typescript@^2.4.0](https://github.com/Microsoft/TypeScript)
 
 ## v1.1.5 - 2017-06-12
 ### Added
