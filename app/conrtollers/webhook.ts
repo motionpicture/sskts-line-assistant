@@ -20,8 +20,8 @@ export async function message(event: any) {
 
     try {
         switch (true) {
-            // 予約番号or電話番号で検索
-            case /^\d{1,12}$/.test(message):
+            // [劇場コード]-[予約番号 or 電話番号]で検索
+            case /^\d{3}-\d{1,12}$/.test(message):
                 await MessageController.pushButtonsReserveNumOrTel(userId, message);
                 break;
 
@@ -37,7 +37,8 @@ export async function message(event: any) {
                 break;
 
             default:
-                // 何もしない
+                // 予約照会方法をアドバイス
+                await MessageController.pushHowToUse(userId);
                 break;
         }
     } catch (error) {
@@ -58,11 +59,11 @@ export async function postback(event: any) {
     try {
         switch (data.action) {
             case 'searchTransactionByReserveNum':
-                await PostbackController.searchTransactionByReserveNum(userId, data.reserveNum);
+                await PostbackController.searchTransactionByReserveNum(userId, data.reserveNum, data.theater);
                 break;
 
             case 'searchTransactionByTel':
-                await PostbackController.searchTransactionByTel(userId, data.tel);
+                await PostbackController.searchTransactionByTel(userId, data.tel, data.theater);
                 break;
 
             case 'pushNotification':

@@ -19,12 +19,47 @@ const moment = require("moment");
 const mongoose = require("mongoose");
 const request = require("request-promise-native");
 const debug = createDebug('sskts-linereport:controller:webhook:message');
+function pushHowToUse(userId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // tslint:disable-next-line:no-multiline-string
+        const text = `How to use
+--------------------
+予約照会
+--------------------
+[劇場コード]-[予約番号 or 電話番号]と入力
+例:118-2425
+
+--------------------
+CSVダウンロード
+--------------------
+「csv」と入力`;
+        yield request.post({
+            simple: false,
+            url: 'https://api.line.me/v2/bot/message/push',
+            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+            json: true,
+            body: {
+                to: userId,
+                messages: [
+                    {
+                        type: 'text',
+                        text: text
+                    }
+                ]
+            }
+        }).promise();
+    });
+}
+exports.pushHowToUse = pushHowToUse;
 /**
  * 予約番号or電話番号のボタンを送信する
  */
 function pushButtonsReserveNumOrTel(userId, message) {
     return __awaiter(this, void 0, void 0, function* () {
         debug(userId, message);
+        const datas = message.split('-');
+        const theater = datas[0];
+        const reserveNumOrTel = datas[1];
         // キュー実行のボタン表示
         yield request.post({
             simple: false,
@@ -44,12 +79,12 @@ function pushButtonsReserveNumOrTel(userId, message) {
                                 {
                                     type: 'postback',
                                     label: '予約番号',
-                                    data: `action=searchTransactionByReserveNum&reserveNum=${message}`
+                                    data: `action=searchTransactionByReserveNum&theater=${theater}&reserveNum=${reserveNumOrTel}`
                                 },
                                 {
                                     type: 'postback',
                                     label: '電話番号',
-                                    data: `action=searchTransactionByTel&tel=${message}`
+                                    data: `action=searchTransactionByTel&theater=${theater}&tel=${reserveNumOrTel}`
                                 }
                             ]
                         }

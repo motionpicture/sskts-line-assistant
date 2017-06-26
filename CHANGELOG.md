@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
+- 予約照会条件に劇場コード追加
 
 ## v1.1.5 - 2017-06-12
 ### Added

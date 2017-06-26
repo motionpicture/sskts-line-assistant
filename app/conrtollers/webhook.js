@@ -26,8 +26,8 @@ function message(event) {
         const userId = event.source.userId;
         try {
             switch (true) {
-                // 予約番号or電話番号で検索
-                case /^\d{1,12}$/.test(message):
+                // [劇場コード]-[予約番号 or 電話番号]で検索
+                case /^\d{3}-\d{1,12}$/.test(message):
                     yield MessageController.pushButtonsReserveNumOrTel(userId, message);
                     break;
                 // 取引csv要求
@@ -40,7 +40,8 @@ function message(event) {
                     yield MessageController.publishURI4transactionsCSV(userId, message.substr(0, 8), message.substr(9, 8));
                     break;
                 default:
-                    // 何もしない
+                    // 予約照会方法をアドバイス
+                    yield MessageController.pushHowToUse(userId);
                     break;
             }
         }
@@ -63,10 +64,10 @@ function postback(event) {
         try {
             switch (data.action) {
                 case 'searchTransactionByReserveNum':
-                    yield PostbackController.searchTransactionByReserveNum(userId, data.reserveNum);
+                    yield PostbackController.searchTransactionByReserveNum(userId, data.reserveNum, data.theater);
                     break;
                 case 'searchTransactionByTel':
-                    yield PostbackController.searchTransactionByTel(userId, data.tel);
+                    yield PostbackController.searchTransactionByTel(userId, data.tel, data.theater);
                     break;
                 case 'pushNotification':
                     yield PostbackController.pushNotification(userId, data.transaction);

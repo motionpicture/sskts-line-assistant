@@ -23,15 +23,17 @@ const debug = createDebug('sskts-linereport:controller:webhook:postback');
  *
  * @param {string} userId LINEユーザーID
  * @param {string} reserveNum 予約番号
+ * @param {string} theaterCode 劇場コード
  */
-function searchTransactionByReserveNum(userId, reserveNum) {
+function searchTransactionByReserveNum(userId, reserveNum, theaterCode) {
     return __awaiter(this, void 0, void 0, function* () {
         debug(userId, reserveNum);
         // 取引検索
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         const transactionDoc = yield transactionAdapter.transactionModel.findOne({
             // tslint:disable-next-line:no-magic-numbers
-            'inquiry_key.reserve_num': parseInt(reserveNum, 10)
+            'inquiry_key.reserve_num': parseInt(reserveNum, 10),
+            'inquiry_key.theater_code': theaterCode
         }, '_id').exec();
         if (transactionDoc === null) {
             yield pushMessage(userId, 'no transaction');
@@ -46,8 +48,9 @@ exports.searchTransactionByReserveNum = searchTransactionByReserveNum;
  *
  * @param {string} userId LINEユーザーID
  * @param {string} tel 電話番号
+ * @param {string} theaterCode 劇場コード
  */
-function searchTransactionByTel(userId, tel) {
+function searchTransactionByTel(userId, tel, theaterCode) {
     return __awaiter(this, void 0, void 0, function* () {
         debug('tel:', tel);
         yield pushMessage(userId, '実験実装中です...');
@@ -55,7 +58,8 @@ function searchTransactionByTel(userId, tel) {
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         const transactionDoc = yield transactionAdapter.transactionModel.findOne({
             status: sskts.factory.transactionStatus.CLOSED,
-            'inquiry_key.tel': tel
+            'inquiry_key.tel': tel,
+            'inquiry_key.theater_code': theaterCode
         }, '_id').exec();
         if (transactionDoc === null) {
             yield pushMessage(userId, 'no transaction');

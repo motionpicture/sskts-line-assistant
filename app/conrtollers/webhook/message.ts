@@ -12,11 +12,45 @@ import * as request from 'request-promise-native';
 
 const debug = createDebug('sskts-linereport:controller:webhook:message');
 
+export async function pushHowToUse(userId: string) {
+    // tslint:disable-next-line:no-multiline-string
+    const text = `How to use
+--------------------
+予約照会
+--------------------
+[劇場コード]-[予約番号 or 電話番号]と入力
+例:118-2425
+
+--------------------
+CSVダウンロード
+--------------------
+「csv」と入力`;
+
+    await request.post({
+        simple: false,
+        url: 'https://api.line.me/v2/bot/message/push',
+        auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+        json: true,
+        body: {
+            to: userId,
+            messages: [
+                {
+                    type: 'text',
+                    text: text
+                }
+            ]
+        }
+    }).promise();
+}
+
 /**
  * 予約番号or電話番号のボタンを送信する
  */
 export async function pushButtonsReserveNumOrTel(userId: string, message: string) {
     debug(userId, message);
+    const datas = message.split('-');
+    const theater = datas[0];
+    const reserveNumOrTel = datas[1];
 
     // キュー実行のボタン表示
     await request.post({
@@ -37,12 +71,12 @@ export async function pushButtonsReserveNumOrTel(userId: string, message: string
                             {
                                 type: 'postback',
                                 label: '予約番号',
-                                data: `action=searchTransactionByReserveNum&reserveNum=${message}`
+                                data: `action=searchTransactionByReserveNum&theater=${theater}&reserveNum=${reserveNumOrTel}`
                             },
                             {
                                 type: 'postback',
                                 label: '電話番号',
-                                data: `action=searchTransactionByTel&tel=${message}`
+                                data: `action=searchTransactionByTel&theater=${theater}&tel=${reserveNumOrTel}`
                             }
                         ]
                     }

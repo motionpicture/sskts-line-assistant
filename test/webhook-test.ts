@@ -20,6 +20,33 @@ describe('POST /webhook', () => {
             });
     });
 
+    it('使い方送信', async () => {
+        await supertest(app)
+            .post('/webhook')
+            .send({
+                events: [
+                    {
+                        message: {
+                            id: '5647872913345',
+                            text: '???',
+                            type: 'text'
+                        },
+                        replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
+                        source: {
+                            type: 'user',
+                            userId: 'U28fba84b4008d60291fc861e2562b34f'
+                        },
+                        timestamp: 1487085535998,
+                        type: 'message'
+                    }
+                ]
+            })
+            .expect(HTTPStatus.OK)
+            .then((response) => {
+                assert.equal(response.text, 'ok');
+            });
+    });
+
     it('予約番号メッセージ受信', async () => {
         await supertest(app)
             .post('/webhook')
@@ -28,7 +55,7 @@ describe('POST /webhook', () => {
                     {
                         message: {
                             id: '5647872913345',
-                            text: '2161',
+                            text: '118-2425',
                             type: 'text'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
@@ -54,7 +81,7 @@ describe('POST /webhook', () => {
                 events: [
                     {
                         postback: {
-                            data: 'action=searchTransactionByReserveNum&reserveNum=2161'
+                            data: 'action=searchTransactionByReserveNum&theater=118&reserveNum=2425'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
                         source: {
@@ -79,7 +106,7 @@ describe('POST /webhook', () => {
                 events: [
                     {
                         postback: {
-                            data: 'action=searchTransactionByTel&tel=09012345678'
+                            data: 'action=searchTransactionByTel&theater=118&tel=09012345678'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
                         source: {
