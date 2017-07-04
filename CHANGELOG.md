@@ -5,8 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- 予約番号検索を、成立以外の取引にも対応。
+- 処理中のステータスをメッセージとして送信するように対応。
 
 ### Changed
+- タスク仕様に合わせて調整。
 
 ## v1.2.0 - 2017-06-26
 ### Changed

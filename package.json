@@ -10,7 +10,7 @@
   ],
   "config": {},
   "dependencies": {
-    "@motionpicture/sskts-domain": "^19.4.0",
+    "@motionpicture/sskts-domain": "^20.0.2",
     "azure-storage": "^2.1.0",
     "body-parser": "^1.17.1",
     "csv-stringify": "^1.0.4",

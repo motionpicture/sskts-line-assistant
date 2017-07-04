@@ -18,6 +18,7 @@ const moment = require("moment");
 const mongoose = require("mongoose");
 const request = require("request-promise-native");
 const debug = createDebug('sskts-linereport:controller:webhook:postback');
+const MESSAGE_TRANSACTION_NOT_FOUND = '該当取引はありません';
 /**
  * 予約番号で取引を検索する
  *
@@ -28,6 +29,7 @@ const debug = createDebug('sskts-linereport:controller:webhook:postback');
 function searchTransactionByReserveNum(userId, reserveNum, theaterCode) {
     return __awaiter(this, void 0, void 0, function* () {
         debug(userId, reserveNum);
+        yield pushMessage(userId, '予約番号で検索しています...');
         // 取引検索
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         const transactionDoc = yield transactionAdapter.transactionModel.findOne({
@@ -36,7 +38,7 @@ function searchTransactionByReserveNum(userId, reserveNum, theaterCode) {
             'inquiry_key.theater_code': theaterCode
         }, '_id').exec();
         if (transactionDoc === null) {
-            yield pushMessage(userId, 'no transaction');
+            yield pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
             return;
         }
         yield pushTransactionDetails(userId, transactionDoc.get('_id').toString());
@@ -53,6 +55,7 @@ exports.searchTransactionByReserveNum = searchTransactionByReserveNum;
 function searchTransactionByTel(userId, tel, theaterCode) {
     return __awaiter(this, void 0, void 0, function* () {
         debug('tel:', tel);
+        yield pushMessage(userId, '電話番号で検索しています...');
         yield pushMessage(userId, '実験実装中です...');
         // 取引検索
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
@@ -62,7 +65,7 @@ function searchTransactionByTel(userId, tel, theaterCode) {
             'inquiry_key.theater_code': theaterCode
         }, '_id').exec();
         if (transactionDoc === null) {
-            yield pushMessage(userId, 'no transaction');
+            yield pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
             return;
         }
         yield pushTransactionDetails(userId, transactionDoc.get('_id').toString());
@@ -78,108 +81,51 @@ exports.searchTransactionByTel = searchTransactionByTel;
 // tslint:disable-next-line:cyclomatic-complexity max-func-body-length
 function pushTransactionDetails(userId, transactionId) {
     return __awaiter(this, void 0, void 0, function* () {
+        yield pushMessage(userId, '取引詳細をまとめています...');
         // 取引検索
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         const performanceAdapter = sskts.adapter.performance(mongoose.connection);
-        const queueAdapter = sskts.adapter.queue(mongoose.connection);
         const transactionDoc = yield transactionAdapter.transactionModel.findById(transactionId).populate('owners').exec();
         if (transactionDoc === null) {
-            yield pushMessage(userId, 'no transaction');
+            yield pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
             return;
         }
-        const transaction = sskts.factory.transaction.create(transactionDoc.toObject());
+        const transaction = transactionDoc.toObject();
         debug('transaction:', transaction);
-        const anonymousOwnerObject = transaction.owners.find((owner) => owner.group === sskts.factory.ownerGroup.ANONYMOUS);
-        if (anonymousOwnerObject === undefined) {
-            throw new Error('owner not found');
-        }
-        const anonymousOwner = sskts.factory.owner.anonymous.create(anonymousOwnerObject);
+        const anonymousOwner = transaction.owners.find((owner) => owner.group === sskts.factory.ownerGroup.ANONYMOUS);
+        const memberOwner = transaction.owners.find((owner) => owner.group === sskts.factory.ownerGroup.MEMBER);
         const authorizations = yield transactionAdapter.findAuthorizationsById(transaction.id);
-        const notifications = yield transactionAdapter.findNotificationsById(transaction.id);
-        debug('authorizations:', authorizations);
         // GMOオーソリを取り出す
-        const gmoAuthorizationObject = authorizations.find((authorization) => {
-            return (authorization.owner_from === anonymousOwner.id && authorization.group === sskts.factory.authorizationGroup.GMO);
-        });
-        const gmoAuthorization = 
-        // tslint:disable-next-line:max-line-length
-        (gmoAuthorizationObject !== undefined) ? sskts.factory.authorization.gmo.create(gmoAuthorizationObject) : undefined;
+        const gmoAuthorization = authorizations.find((authorization) => authorization.group === sskts.factory.authorizationGroup.GMO);
         // ムビチケオーソリを取り出す
-        const mvtkAuthorizationObject = authorizations.find((authorization) => {
-            // tslint:disable-next-line:max-line-length
-            return (authorization.owner_from === anonymousOwner.id && authorization.group === sskts.factory.authorizationGroup.MVTK);
-        });
-        const mvtkAuthorization = 
-        // tslint:disable-next-line:max-line-length
-        (mvtkAuthorizationObject !== undefined) ? sskts.factory.authorization.mvtk.create(mvtkAuthorizationObject) : undefined;
+        const mvtkAuthorization = authorizations.find((authorization) => authorization.group === sskts.factory.authorizationGroup.MVTK);
         // 座席予約オーソリを取り出す
-        const coaSeatReservationAuthorizationObject = authorizations.find((authorization) => {
-            return (authorization.owner_to === anonymousOwner.id &&
-                authorization.group === sskts.factory.authorizationGroup.COA_SEAT_RESERVATION);
-        });
-        const coaSeatReservationAuthorization = 
-        // tslint:disable-next-line:max-line-length
-        (coaSeatReservationAuthorizationObject !== undefined) ? sskts.factory.authorization.coaSeatReservation.create(coaSeatReservationAuthorizationObject) : undefined;
-        if (coaSeatReservationAuthorization === undefined) {
-            throw new Error('seat reservation not found');
-        }
-        // パフォーマンス情報取得
-        const performanceOption = yield sskts.service.master.findPerformance(coaSeatReservationAuthorization.assets[0].performance)(performanceAdapter);
-        if (performanceOption.isEmpty) {
-            throw new Error('performance not found');
-        }
-        const performance = performanceOption.get();
-        debug(performance);
-        // キューの実行日時を調べる
-        let coaAuthorizationSettledAt = null;
-        let gmoAuthorizationSettledAt = null;
-        let emailNotificationPushedAt = null;
-        if (transaction.status === sskts.factory.transactionStatus.CLOSED) {
-            let promises = [];
-            promises = promises.concat(authorizations.map((authorization) => __awaiter(this, void 0, void 0, function* () {
-                const queueDoc = yield queueAdapter.model.findOne({
-                    group: sskts.factory.queueGroup.SETTLE_AUTHORIZATION,
-                    'authorization.id': authorization.id
-                }).exec();
-                debug('queueDoc:', queueDoc);
-                if (queueDoc === null) {
-                    return;
-                }
-                switch (authorization.group) {
-                    case sskts.factory.authorizationGroup.COA_SEAT_RESERVATION:
-                        if (queueDoc.get('status') === sskts.factory.queueStatus.EXECUTED) {
-                            coaAuthorizationSettledAt = queueDoc.get('last_tried_at');
-                        }
-                        break;
-                    case sskts.factory.authorizationGroup.GMO:
-                        if (queueDoc.get('status') === sskts.factory.queueStatus.EXECUTED) {
-                            gmoAuthorizationSettledAt = queueDoc.get('last_tried_at');
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            })));
-            promises = promises.concat(notifications.map((notification) => __awaiter(this, void 0, void 0, function* () {
-                const queueDoc = yield queueAdapter.model.findOne({
-                    group: sskts.factory.queueGroup.PUSH_NOTIFICATION,
-                    'notification.id': notification.id
-                }).exec();
-                if (queueDoc === null) {
-                    return;
-                }
-                switch (notification.group) {
-                    case sskts.factory.notificationGroup.EMAIL:
-                        if (queueDoc.get('status') === sskts.factory.queueStatus.EXECUTED) {
-                            emailNotificationPushedAt = queueDoc.get('last_tried_at');
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            })));
-            yield Promise.all(promises);
-        }
+        const seatReservationAuthorization = authorizations.find((authorization) => authorization.group === sskts.factory.authorizationGroup.COA_SEAT_RESERVATION);
+        // タスクの実行日時を調べる
+        const cancelSeatReservationAuthorizationTaskIdInTransaction = transaction.tasks.find((task) => task.name === sskts.factory.taskName.CancelSeatReservationAuthorization);
+        const cancelGMOAuthorizationTaskInTransaction = transaction.tasks.find((task) => task.name === sskts.factory.taskName.CancelGMOAuthorization);
+        const settleSeatReservationAuthorizationTaskIdInTransaction = transaction.tasks.find((task) => task.name === sskts.factory.taskName.SettleSeatReservationAuthorization);
+        const settleGMOAuthorizationTaskInTransaction = transaction.tasks.find((task) => task.name === sskts.factory.taskName.SettleGMOAuthorization);
+        const settleMvtkAuthorizationTaskInTransaction = transaction.tasks.find((task) => task.name === sskts.factory.taskName.SettleMvtkAuthorization);
+        const sendEmailNotificationTaskInTransaction = transaction.tasks.find((task) => task.name === sskts.factory.taskName.SendEmailNotification);
+        const cancelSeatReservationAuthorizationTask = (cancelSeatReservationAuthorizationTaskIdInTransaction !== undefined)
+            ? yield sskts.adapter.task(mongoose.connection).taskModel.findById(cancelSeatReservationAuthorizationTaskIdInTransaction.id).exec()
+            : null;
+        const cancelGMOAuthorizationTask = (cancelGMOAuthorizationTaskInTransaction !== undefined)
+            ? yield sskts.adapter.task(mongoose.connection).taskModel.findById(cancelGMOAuthorizationTaskInTransaction.id).exec()
+            : null;
+        const settleSeatReservationAuthorizationTask = (settleSeatReservationAuthorizationTaskIdInTransaction !== undefined)
+            ? yield sskts.adapter.task(mongoose.connection).taskModel.findById(settleSeatReservationAuthorizationTaskIdInTransaction.id).exec()
+            : null;
+        const settleGMOAuthorizationTask = (settleGMOAuthorizationTaskInTransaction !== undefined)
+            ? yield sskts.adapter.task(mongoose.connection).taskModel.findById(settleGMOAuthorizationTaskInTransaction.id).exec()
+            : null;
+        const settleMvtkAuthorizationTask = (settleMvtkAuthorizationTaskInTransaction !== undefined)
+            ? yield sskts.adapter.task(mongoose.connection).taskModel.findById(settleMvtkAuthorizationTaskInTransaction.id).exec()
+            : null;
+        const sendEmailNotificationTask = (sendEmailNotificationTaskInTransaction !== undefined)
+            ? yield sskts.adapter.task(mongoose.connection).taskModel.findById(sendEmailNotificationTaskInTransaction.id).exec()
+            : null;
         let qrCodesBySeatCode = [];
         if (transaction.inquiry_key !== undefined) {
             // COAからQRを取得
@@ -199,38 +145,59 @@ function pushTransactionDetails(userId, transactionId) {
                 });
             }
         }
-        // tslint:disable-next-line:max-line-length
-        const performanceDatetimeStr = `${moment(performance.day, 'YYYYMMDD').format('YYYY/MM/DD')} ${moment(performance.time_start, 'HHmm').format('HH:mm')}-${moment(performance.time_end, 'HHmm').format('HH:mm')}`;
-        const ticketsStr = coaSeatReservationAuthorization.assets.map((asset) => `●${asset.seat_code} ${(asset.ticket_name !== undefined) ? asset.ticket_name.ja : ''} ￥${asset.sale_price}`).join('\n');
-        // .jaを取り出している部分は多言語スキーマを取り入れる以前との互換性維持のため、undefinedチェックをしている
+        let performance;
+        let performanceDatetimeStr = '';
+        let ticketsStr = '';
+        if (seatReservationAuthorization !== undefined) {
+            // パフォーマンス情報取得
+            const performanceOption = yield sskts.service.master.findPerformance(seatReservationAuthorization.assets[0].performance)(performanceAdapter);
+            if (performanceOption.isEmpty) {
+                throw new Error('performance not found');
+            }
+            performance = performanceOption.get();
+            // tslint:disable-next-line:max-line-length
+            performanceDatetimeStr = `${moment(performance.day, 'YYYYMMDD').format('YYYY/MM/DD')} ${moment(performance.time_start, 'HHmm').format('HH:mm')}-${moment(performance.time_end, 'HHmm').format('HH:mm')}`;
+            ticketsStr = seatReservationAuthorization.assets.map((asset) => `●${asset.seat_code} ${asset.ticket_name.ja} ￥${asset.sale_price}`).join('\n');
+        }
+        // tslint:disable:max-line-length
         const transactionDetails = `--------------------
 取引概要
 --------------------
-ID:${transaction.id}
+${transaction.id}
+${transaction.status}
 ${(transaction.inquiry_key !== undefined) ? `予約番号:${transaction.inquiry_key.reserve_num}` : ''}
 ${(transaction.inquiry_key !== undefined) ? `劇場:${transaction.inquiry_key.theater_code}` : ''}
 --------------------
 取引状況
 --------------------
-${(transaction.started_at instanceof Date) ? moment(transaction.started_at).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 開始
-${(transaction.closed_at instanceof Date) ? moment(transaction.closed_at).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 成立
-${(transaction.expired_at instanceof Date) ? moment(transaction.expired_at).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 期限切れ
-${(transaction.queues_exported_at instanceof Date) ? moment(transaction.queues_exported_at).format('YYYY-MM-DD HH:mm:ss') + '' : ''} キュー
-${(emailNotificationPushedAt !== null) ? moment(emailNotificationPushedAt).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} メール送信
-${(coaAuthorizationSettledAt !== null) ? moment(coaAuthorizationSettledAt).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 本予約
-${(gmoAuthorizationSettledAt !== null) ? moment(gmoAuthorizationSettledAt).format('YYYY-MM-DD HH:mm:ss') : '?????????? ????????'} 実売上
+${(transaction.started_at instanceof Date) ? `${moment(transaction.started_at).format('YYYY-MM-DD HH:mm:ss')} 開始` : ''}
+${(transaction.closed_at instanceof Date) ? `${moment(transaction.closed_at).format('YYYY-MM-DD HH:mm:ss')} 成立` : ''}
+${(transaction.expired_at instanceof Date) ? `${moment(transaction.expired_at).format('YYYY-MM-DD HH:mm:ss')} 期限切れ` : ''}
+${(transaction.queues_exported_at instanceof Date) ? `${moment(transaction.queues_exported_at).format('YYYY-MM-DD HH:mm:ss')} タスク出力` + '' : ''}
+${(cancelSeatReservationAuthorizationTask !== null && cancelSeatReservationAuthorizationTask.get('status') === 'Executed') ? `${moment(cancelSeatReservationAuthorizationTask.get('last_tried_at')).format('YYYY-MM-DD HH:mm:ss')} 仮予約取消` : ''}
+${(cancelGMOAuthorizationTask !== null && cancelGMOAuthorizationTask.get('status') === 'Executed') ? `${moment(cancelGMOAuthorizationTask.get('last_tried_at')).format('YYYY-MM-DD HH:mm:ss')} AUTH取消` : ''}
+${(sendEmailNotificationTask !== null && sendEmailNotificationTask.get('status') === 'Executed') ? `${moment(sendEmailNotificationTask.get('last_tried_at')).format('YYYY-MM-DD HH:mm:ss')} メール送信` : ''}
+${(settleSeatReservationAuthorizationTask !== null && settleSeatReservationAuthorizationTask.get('status') === 'Executed') ? `${moment(settleSeatReservationAuthorizationTask.get('last_tried_at')).format('YYYY-MM-DD HH:mm:ss')} 本予約` : ''}
+${(settleGMOAuthorizationTask !== null && settleGMOAuthorizationTask.get('status') === 'Executed') ? `${moment(settleGMOAuthorizationTask.get('last_tried_at')).format('YYYY-MM-DD HH:mm:ss')} 実売上` : ''}
+${(settleMvtkAuthorizationTask !== null && settleMvtkAuthorizationTask.get('status') === 'Executed') ? `${moment(settleMvtkAuthorizationTask.get('last_tried_at')).format('YYYY-MM-DD HH:mm:ss')} ムビチケ着券` : ''}
 --------------------
 購入者情報
 --------------------
-${anonymousOwner.name_first} ${anonymousOwner.name_last}
-${anonymousOwner.email}
-${anonymousOwner.tel}
+${(anonymousOwner !== undefined) ? `${anonymousOwner.name_first} ${anonymousOwner.name_last}` : ''}
+${(anonymousOwner !== undefined) ? anonymousOwner.email : ''}
+${(anonymousOwner !== undefined) ? anonymousOwner.tel : ''}
+--------------------
+会員情報
+--------------------
+${(memberOwner !== undefined) ? `${memberOwner.name_first} ${memberOwner.name_last}` : ''}
+${(memberOwner !== undefined) ? memberOwner.email : ''}
+${(memberOwner !== undefined) ? memberOwner.tel : ''}
 --------------------
 座席予約
 --------------------
-${performance.film.name.ja}
+${(performance !== undefined) ? performance.film.name.ja : ''}
 ${performanceDatetimeStr}
-@${performance.theater.name.ja} ${performance.screen.name.ja}
+${(performance !== undefined) ? `@${performance.theater.name.ja} ${performance.screen.name.ja}` : ''}
 ${ticketsStr}
 --------------------
 GMO
@@ -284,9 +251,9 @@ ${qrCodesBySeatCode.map((qrCode) => '●' + qrCode.seat_code + ' ' + qrCode.qr).
 }
 function pushNotification(userId, transactionId) {
     return __awaiter(this, void 0, void 0, function* () {
+        yield pushMessage(userId, 'メールを送信しています...');
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         let promises = [];
-        yield pushMessage(userId, 'メールを送信しています...');
         // 取引検索
         const transactionDoc4notification = yield transactionAdapter.transactionModel.findById(transactionId).exec();
         if (transactionDoc4notification === null) {
@@ -325,9 +292,9 @@ function pushNotification(userId, transactionId) {
 exports.pushNotification = pushNotification;
 function transferCoaSeatReservationAuthorization(userId, transactionId) {
     return __awaiter(this, void 0, void 0, function* () {
+        yield pushMessage(userId, '本予約処理をしています...');
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         let promises = [];
-        yield pushMessage(userId, '本予約処理をしています...');
         // 取引検索
         const transactionDoc4transfer = yield transactionAdapter.transactionModel.findById(transactionId).exec();
         if (transactionDoc4transfer === null) {
