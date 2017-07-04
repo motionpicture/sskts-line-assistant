@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 
+## v1.3.0 - 2017-07-04
+### Added
+- 予約番号検索を、成立以外の取引にも対応。
+- 処理中のステータスをメッセージとして送信するように対応。
+
+### Changed
+- タスク仕様に合わせて調整。
+
 ## v1.2.0 - 2017-06-26
 ### Changed
 - 予約照会条件に劇場コード追加
