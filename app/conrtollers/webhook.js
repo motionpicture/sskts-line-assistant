@@ -22,22 +22,22 @@ const debug = createDebug('sskts-linereport:controller:webhook');
  */
 function message(event) {
     return __awaiter(this, void 0, void 0, function* () {
-        const message = event.message.text;
+        const messageText = event.message.text;
         const userId = event.source.userId;
         try {
             switch (true) {
                 // [劇場コード]-[予約番号 or 電話番号]で検索
-                case /^\d{3}-\d{1,12}$/.test(message):
-                    yield MessageController.pushButtonsReserveNumOrTel(userId, message);
+                case /^\d{3}-\d{1,12}$/.test(messageText):
+                    yield MessageController.pushButtonsReserveNumOrTel(userId, messageText);
                     break;
                 // 取引csv要求
-                case /^csv$/.test(message):
+                case /^csv$/.test(messageText):
                     yield MessageController.askFromWhenAndToWhen(userId);
                     break;
                 // 取引csv期間指定
-                case /^\d{8}-\d{8}$/.test(message):
+                case /^\d{8}-\d{8}$/.test(messageText):
                     // tslint:disable-next-line:no-magic-numbers
-                    yield MessageController.publishURI4transactionsCSV(userId, message.substr(0, 8), message.substr(9, 8));
+                    yield MessageController.publishURI4transactionsCSV(userId, messageText.substr(0, 8), messageText.substr(9, 8));
                     break;
                 default:
                     // 予約照会方法をアドバイス
@@ -93,7 +93,6 @@ exports.postback = postback;
 function follow(event) {
     return __awaiter(this, void 0, void 0, function* () {
         debug('event is', event);
-        return;
     });
 }
 exports.follow = follow;
@@ -103,7 +102,6 @@ exports.follow = follow;
 function unfollow(event) {
     return __awaiter(this, void 0, void 0, function* () {
         debug('event is', event);
-        return;
     });
 }
 exports.unfollow = unfollow;
@@ -113,7 +111,6 @@ exports.unfollow = unfollow;
 function join(event) {
     return __awaiter(this, void 0, void 0, function* () {
         debug('event is', event);
-        return;
     });
 }
 exports.join = join;
@@ -123,7 +120,6 @@ exports.join = join;
 function leave(event) {
     return __awaiter(this, void 0, void 0, function* () {
         debug('event is', event);
-        return;
     });
 }
 exports.leave = leave;
@@ -133,7 +129,6 @@ exports.leave = leave;
 function beacon(event) {
     return __awaiter(this, void 0, void 0, function* () {
         debug('event is', event);
-        return;
     });
 }
 exports.beacon = beacon;
