@@ -2,15 +2,15 @@
  * LINE webhook messageコントローラー
  */
 
-// import * as sskts from '@motionpicture/sskts-domain';
-// import * as azureStorage from 'azure-storage';
-// import * as csvStringify from 'csv-stringify';
+import * as sskts from '@motionpicture/sskts-domain';
+import * as azureStorage from 'azure-storage';
+import * as csvStringify from 'csv-stringify';
 import * as createDebug from 'debug';
-// import * as moment from 'moment';
-// import * as mongoose from 'mongoose';
+import * as moment from 'moment';
+import * as mongoose from 'mongoose';
 import * as request from 'request-promise-native';
 
-const debug = createDebug('sskts-linereport:controller:webhook:message');
+const debug = createDebug('sskts-line-assistant:controller:webhook:message');
 
 export async function pushHowToUse(userId: string) {
     // tslint:disable-next-line:no-multiline-string
@@ -19,7 +19,6 @@ export async function pushHowToUse(userId: string) {
 予約照会
 --------------------
 ******** new! ********
-成立以外のステータスの取引も検索できるようになりました！
 ******** new! ********
 
 [劇場コード]-[予約番号 or 電話番号]と入力
@@ -112,188 +111,166 @@ export async function askFromWhenAndToWhen(userId: string) {
  * 取引CSVダウンロードURIを発行する
  */
 // tslint:disable-next-line:max-func-body-length
-export async function publishURI4transactionsCSV(__1: string, __2: string, __3: string) {
+export async function publishURI4transactionsCSV(userId: string, dateFrom: string, dateTo: string) {
     // 取引検索
-    // const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-    // const transactionDocs = await transactionAdapter.transactionModel.find(
-    //     {
-    //         status: sskts.factory.transactionStatus.CLOSED,
-    //         closed_at: {
-    //             $gte: moment(dateFrom, 'YYYYMMDD').toDate(),
-    //             $lt: moment(dateTo, 'YYYYMMDD').add(1, 'days').toDate()
-    //         }
-    //     }
-    // ).populate('owners').exec();
-    // debug('transactionDocs:', transactionDocs);
+    const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+    const transactionDocs = await transactionAdapter.transactionModel.find(
+        {
+            typeOf: sskts.factory.transactionType.PlaceOrder,
+            'object.seatReservation': { $exists: true },
+            startDate: {
+                $gte: moment(dateFrom, 'YYYYMMDD').toDate(),
+                $lt: moment(dateTo, 'YYYYMMDD').add(1, 'days').toDate()
+            }
+        }
+    ).exec();
+    debug('transactionDocs:', transactionDocs);
 
-    // await request.post({
-    //     simple: false,
-    //     url: 'https://api.line.me/v2/bot/message/push',
-    //     auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-    //     json: true,
-    //     body: {
-    //         to: userId,
-    //         messages: [
-    //             { type: 'text', text: `${transactionDocs.length.toString()}取引のcsvを作成しています...` }
-    //         ]
-    //     }
-    // }).promise();
+    await request.post({
+        simple: false,
+        url: 'https://api.line.me/v2/bot/message/push',
+        auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+        json: true,
+        body: {
+            to: userId,
+            messages: [
+                { type: 'text', text: `creating a csv ${transactionDocs.length.toString()} transactions...` }
+            ]
+        }
+    }).promise();
 
-    // // 取引ごとに詳細を検索し、csvを作成する
-    // const transactionDetails = await Promise.all(transactionDocs.map(async (transactionDoc) => {
-    //     const transaction = sskts.factory.transaction.create(<any>transactionDoc.toObject());
-    //     const anonymousOwnerObject = transaction.owners.find((owner) => owner.group === sskts.factory.ownerGroup.ANONYMOUS);
-    //     if (anonymousOwnerObject === undefined) {
-    //         throw new Error('owner not found');
-    //     }
-    //     const anonymousOwner = sskts.factory.owner.anonymous.create(anonymousOwnerObject);
+    // 取引ごとに詳細を検索し、csvを作成する
+    // tslint:disable-next-line:max-func-body-length
+    const transactionDetails = await Promise.all(transactionDocs.map(async (transactionDoc) => {
+        const transaction = <sskts.factory.transaction.placeOrder.ITransaction>transactionDoc.toObject();
 
-    //     const authorizations = await transactionAdapter.findAuthorizationsById(transaction.id);
+        if (transaction.result !== undefined) {
+            const order = transaction.result.order;
+            const paymentMethodCredit = order.paymentMethods.find((paymentMethod) => paymentMethod.paymentMethod === 'CreditCard');
+            const mvtkDiscounts = order.discounts.filter((discount) => discount.name === 'ムビチケカード');
 
-    //     // GMOオーソリを取り出す
-    //     const gmoAuthorizationObject = authorizations.find((authorization) => {
-    //         return (authorization.owner_from === anonymousOwner.id && authorization.group === sskts.factory.authorizationGroup.GMO);
-    //     });
-    //     const gmoAuthorization =
-    //         (gmoAuthorizationObject !== undefined) ? sskts.factory.authorization.gmo.create(<any>gmoAuthorizationObject) : undefined;
+            return {
+                id: transaction.id,
+                theater: transaction.seller.name,
+                reserveNum: order.orderInquiryKey.confirmationNumber,
+                closedAt: moment(transaction.endDate).format('YYYY-MM-DD HH:mm:ss'),
+                name: order.customer.name,
+                email: order.customer.email,
+                tel: order.customer.telephone,
+                price: order.price,
+                gmoOrderId: `${(paymentMethodCredit !== undefined) ? paymentMethodCredit.paymentMethodId : ''}`,
+                mvtkKnyknrNos: `${mvtkDiscounts.map((mvtkDiscount) => mvtkDiscount.discountCode).join('|')}`,
+                mvtkPrice: order.discounts.reduce((a, b) => a + b.discount, 0)
+            };
+        } else {
+            return {
+                id: transaction.id,
+                theater: transaction.seller.name,
+                reserveNum: (<any>transaction.object.seatReservation).result.tmpReserveNum,
+                closedAt: '',
+                name: '',
+                email: '',
+                tel: '',
+                price: '',
+                gmoOrderId: '',
+                mvtkKnyknrNos: '',
+                mvtkPrice: ''
+            };
+        }
+    }));
 
-    //     // ムビチケオーソリを取り出す
-    //     const mvtkAuthorizationObject = authorizations.find((authorization) => {
-    //         return (authorization.owner_from === anonymousOwner.id && authorization.group === sskts.factory.authorizationGroup.MVTK);
-    //     });
-    //     const mvtkAuthorization =
-    //         (mvtkAuthorizationObject !== undefined) ? sskts.factory.authorization.mvtk.create(<any>mvtkAuthorizationObject) : undefined;
+    debug('transactionDetails:', transactionDetails);
 
-    //     // 座席予約オーソリを取り出す
-    //     const coaSeatReservationAuthorizationObject = authorizations.find((authorization) => {
-    //         return (
-    //             authorization.owner_to === anonymousOwner.id &&
-    //             authorization.group === sskts.factory.authorizationGroup.COA_SEAT_RESERVATION
-    //         );
-    //     });
-    //     const coaSeatReservationAuthorization =
-    //         // tslint:disable-next-line:max-line-length
-    // tslint:disable-next-line:max-line-length
-    //         (coaSeatReservationAuthorizationObject !== undefined) ? sskts.factory.authorization.coaSeatReservation.create(<any>coaSeatReservationAuthorizationObject) : undefined;
+    // tslint:disable-next-line:no-require-imports
+    const jconv = require('jconv');
+    const columns = <any>{
+        id: '取引ID',
+        theater: '劇場コード',
+        reserveNum: '予約番号',
+        closedAt: '成立日時',
+        name: '名前',
+        email: 'メールアドレス',
+        tel: '電話番号',
+        price: '金額',
+        gmoOrderId: 'GMOオーダーID',
+        // gmoPrice: 'GMO金額',
+        mvtkKnyknrNos: 'ムビチケ購入管理番号',
+        mvtkPrice: 'ムビチケ金額'
+    };
 
-    //     if (coaSeatReservationAuthorization === undefined) {
-    //         throw new Error('seat reservation not found');
-    //     }
+    const sasUrl = await new Promise<string>((resolve, reject) => {
+        csvStringify(
+            <any>transactionDetails,
+            {
+                header: true,
+                columns: columns
+            },
+            (err, output) => {
+                if (err instanceof Error) {
+                    reject(err);
+                } else {
+                    // save to blob
+                    debug('output:', output);
 
-    //     // 成立済みの取引なので、照会キーがないことは実際ありえない
-    //     if (transaction.inquiry_key === undefined) {
-    //         throw new Error('inquiry_key undefined');
-    //     }
+                    const blobService = azureStorage.createBlobService();
+                    const CONTAINER = 'transactions-csvs';
+                    blobService.createContainerIfNotExists(
+                        CONTAINER,
+                        {
+                            // publicAccessLevel: 'blob'
+                        },
+                        (createContainerError) => {
+                            if (createContainerError instanceof Error) {
+                                reject(createContainerError);
 
-    //     return {
-    //         id: transaction.id,
-    //         theater: transaction.inquiry_key.theater_code,
-    //         reserveNum: transaction.inquiry_key.reserve_num,
-    //         closedAt: moment(transaction.closed_at).format('YYYY-MM-DD HH:mm:ss'),
-    //         name: `${anonymousOwner.name_first} ${anonymousOwner.name_last}`,
-    //         email: anonymousOwner.email,
-    //         tel: anonymousOwner.tel,
-    //         price: coaSeatReservationAuthorization.assets.reduce((a, asset) => a + asset.sale_price, 0),
-    //         gmoOrderId: `${(gmoAuthorization !== undefined) ? gmoAuthorization.gmo_order_id : ''}`,
-    //         gmoPrice: `${(gmoAuthorization !== undefined) ? gmoAuthorization.price.toString() : ''}`,
-    //         // tslint:disable-next-line:max-line-length
-    // tslint:disable-next-line:max-line-length
-    //         mvtkKnyknrNos: `${(mvtkAuthorization !== undefined) ? mvtkAuthorization.knyknr_no_info.map((knyknrNoInfo) => knyknrNoInfo.knyknr_no).join('|') : ''}`,
-    //         mvtkPrice: `${(mvtkAuthorization !== undefined) ? mvtkAuthorization.price.toString() : ''}`
-    //     };
-    // }));
-    // debug('transactionDetails:', transactionDetails);
+                                return;
+                            }
 
-    // // tslint:disable-next-line:no-require-imports
-    // const jconv = require('jconv');
-    // const columns = <any>{
-    //     id: '取引ID',
-    //     theater: '劇場コード',
-    //     reserveNum: '予約番号',
-    //     closedAt: '成立日時',
-    //     name: '名前',
-    //     email: 'メールアドレス',
-    //     tel: '電話番号',
-    //     price: '金額',
-    //     gmoOrderId: 'GMOオーダーID',
-    //     gmoPrice: 'GMO金額',
-    //     mvtkKnyknrNos: 'ムビチケ購入管理番号',
-    //     mvtkPrice: 'ムビチケ金額'
-    // };
+                            const blob = `sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`;
+                            blobService.createBlockBlobFromText(
+                                CONTAINER, blob, jconv.convert(output, 'UTF8', 'SJIS'), (createBlockBlobError, result, response) => {
+                                    debug(createBlockBlobError, result, response);
+                                    if (createBlockBlobError instanceof Error) {
+                                        reject(createBlockBlobError);
 
-    // const sasUrl = await new Promise<string>((resolve, reject) => {
-    //     csvStringify(
-    //         <any>transactionDetails,
-    //         {
-    //             header: true,
-    //             columns: columns
-    //         },
-    //         (err, output) => {
-    //             if (err instanceof Error) {
-    //                 reject(err);
-    //             } else {
-    //                 // save to blob
-    //                 debug('output:', output);
+                                        return;
+                                    }
 
-    //                 const blobService = azureStorage.createBlobService();
-    //                 const CONTAINER = 'transactions-csvs';
-    //                 blobService.createContainerIfNotExists(
-    //                     CONTAINER,
-    //                     {
-    //                         // publicAccessLevel: 'blob'
-    //                     },
-    //                     (createContainerError) => {
-    //                         if (createContainerError instanceof Error) {
-    //                             reject(createContainerError);
-    //                             return;
-    //                         }
+                                    // 期限つきのURLを発行する
+                                    const startDate = new Date();
+                                    const expiryDate = new Date(startDate);
+                                    // tslint:disable-next-line:no-magic-numbers
+                                    expiryDate.setMinutes(startDate.getMinutes() + 10);
+                                    // tslint:disable-next-line:no-magic-numbers
+                                    startDate.setMinutes(startDate.getMinutes() - 10);
+                                    const sharedAccessPolicy = {
+                                        AccessPolicy: {
+                                            Permissions: azureStorage.BlobUtilities.SharedAccessPermissions.READ,
+                                            Start: startDate,
+                                            Expiry: expiryDate
+                                        }
+                                    };
+                                    // tslint:disable-next-line:max-line-length
+                                    const token = blobService.generateSharedAccessSignature(result.container, result.name, sharedAccessPolicy);
+                                    resolve(blobService.getUrl(result.container, result.name, token));
+                                }
+                            );
+                        }
+                    );
+                }
+            });
+    });
 
-    //                         const blob = 'sskts-linereport-transactions-csv-' + moment().format('YYYYMMDDHHmmss') + '.csv';
-    //                         blobService.createBlockBlobFromText(
-    //                             CONTAINER, blob, jconv.convert(output, 'UTF8', 'SJIS'), (createBlockBlobError, result, response) => {
-    //                                 debug(createBlockBlobError, result, response);
-    //                                 if (createBlockBlobError instanceof Error) {
-    //                                     reject(createBlockBlobError);
-
-    //                                     return;
-    //                                 }
-
-    //                                 // 期限つきのURLを発行する
-    //                                 const startDate = new Date();
-    //                                 const expiryDate = new Date(startDate);
-    //                                 // tslint:disable-next-line:no-magic-numbers
-    //                                 expiryDate.setMinutes(startDate.getMinutes() + 10);
-    //                                 // tslint:disable-next-line:no-magic-numbers
-    //                                 startDate.setMinutes(startDate.getMinutes() - 10);
-    //                                 const sharedAccessPolicy = {
-    //                                     AccessPolicy: {
-    //                                         Permissions: azureStorage.BlobUtilities.SharedAccessPermissions.READ,
-    //                                         Start: startDate,
-    //                                         Expiry: expiryDate
-    //                                     }
-    //                                 };
-    //                                 // tslint:disable-next-line:max-line-length
-    // tslint:disable-next-line:max-line-length
-    //                                 const token = blobService.generateSharedAccessSignature(result.container, result.name, sharedAccessPolicy);
-    //                                 resolve(blobService.getUrl(result.container, result.name, token));
-    //                             }
-    //                         );
-    //                     }
-    //                 );
-    //             }
-    //         });
-    // });
-
-    // await request.post({
-    //     simple: false,
-    //     url: 'https://api.line.me/v2/bot/message/push',
-    //     auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-    //     json: true,
-    //     body: {
-    //         to: userId,
-    //         messages: [
-    //             { type: 'text', text: `download -> ${sasUrl}` }
-    //         ]
-    //     }
-    // }).promise();
+    await request.post({
+        simple: false,
+        url: 'https://api.line.me/v2/bot/message/push',
+        auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+        json: true,
+        body: {
+            to: userId,
+            messages: [
+                { type: 'text', text: `download -> ${sasUrl} ` }
+            ]
+        }
+    }).promise();
 }

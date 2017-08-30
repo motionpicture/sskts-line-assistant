@@ -52,7 +52,7 @@ export async function searchTransactionByReserveNum(userId: string, reserveNum: 
  */
 export async function searchTransactionByTel(userId: string, tel: string, __: string) {
     debug('tel:', tel);
-    await pushMessage(userId, '実装中...');
+    await pushMessage(userId, 'implementing...');
     // await pushMessage(userId, '電話番号で検索しています...');
 
     // 取引検索
@@ -149,6 +149,9 @@ ${(settleGMOTask.status === sskts.factory.taskStatus.Executed) ? `${moment(<Date
 購入者情報
 --------------------
 ${order.customer.name}
+${order.customer.telephone}
+${order.customer.email}
+${(order.customer.memberOf !== undefined) ? `会員:${order.customer.memberOf.membershipNumber}` : ''}
 --------------------
 座席予約
 --------------------
@@ -177,140 +180,103 @@ ${orderItems.map((orderItem) => `●${orderItem.itemOffered.reservedTicket.ticke
     await pushMessage(userId, transactionDetails);
 
     // キュー実行のボタン表示
-    // await request.post({
-    //     simple: false,
-    //     url: 'https://api.line.me/v2/bot/message/push',
-    //     auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-    //     json: true,
-    //     body: {
-    //         to: userId,
-    //         messages: [
-    //             {
-    //                 type: 'template',
-    //                 altText: 'aaa',
-    //                 template: {
-    //                     type: 'buttons',
-    //                     text: 'キュー実行',
-    //                     actions: [
-    //                         {
-    //                             type: 'postback',
-    //                             label: 'メール送信',
-    //                             data: `action=pushNotification&transaction=${order.orderNumber}`
-    //                         },
-    //                         {
-    //                             type: 'postback',
-    //                             label: '本予約',
-    //                             data: `action=transferCoaSeatReservationAuthorization&transaction=${order.orderNumber}`
-    //                         }
-    //                     ]
-    //                 }
-    //             }
-    //         ]
-    //     }
-    // }).promise();
+    await request.post({
+        simple: false,
+        url: 'https://api.line.me/v2/bot/message/push',
+        auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+        json: true,
+        body: {
+            to: userId,
+            messages: [
+                {
+                    type: 'template',
+                    altText: 'aaa',
+                    template: {
+                        type: 'buttons',
+                        text: 'タスク実行',
+                        actions: [
+                            {
+                                type: 'postback',
+                                label: 'メール送信',
+                                data: `action=pushNotification&transaction=${placeOrderTransaction.id}`
+                            },
+                            {
+                                type: 'postback',
+                                label: '本予約',
+                                data: `action=transferCoaSeatReservationAuthorization&transaction=${placeOrderTransaction.id}`
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }).promise();
 }
 
-export async function pushNotification(userId: string, __: string) {
-    await pushMessage(userId, '実装中...');
+export async function pushNotification(userId: string, transactionId: string) {
+    await pushMessage(userId, 'sending...');
 
-    // await pushMessage(userId, 'メールを送信しています...');
+    const taskAdapter = sskts.adapter.task(mongoose.connection);
 
-    // const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-    // let promises: Promise<void>[] = [];
+    // タスク検索
+    const tasks = await taskAdapter.taskModel.find({
+        name: sskts.factory.taskName.SendEmailNotification,
+        'data.transactionId': transactionId
+    }).exec();
 
-    // // 取引検索
-    // const transactionDoc4notification = await transactionAdapter.transactionModel.findById(transactionId).exec();
+    if (tasks.length === 0) {
+        await pushMessage(userId, 'no tasks.');
 
-    // if (transactionDoc4notification === null) {
-    //     await pushMessage(userId, 'no transaction');
+        return;
+    }
 
-    //     return;
-    // }
+    let promises: Promise<void>[] = [];
+    promises = promises.concat(tasks.map(async (task) => {
+        await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, mongoose.connection);
+    }));
 
-    // if (transactionDoc4notification.get('status') !== sskts.factory.transactionStatus.CLOSED) {
-    //     return;
-    // }
+    try {
+        await Promise.all(promises);
+    } catch (error) {
+        await pushMessage(userId, `error:${error.message}`);
 
-    // const notifications = await transactionAdapter.findNotificationsById(transactionDoc4notification.get('_id'));
-    // debug(notifications);
-    // if (notifications.length === 0) {
-    //     await pushMessage(userId, '通知がありません');
+        return;
+    }
 
-    //     return;
-    // }
-
-    // promises = [];
-    // promises = promises.concat(notifications.map(async (notification) => {
-    //     switch (notification.group) {
-    //         case sskts.factory.notificationGroup.EMAIL:
-    //             await sskts.service.notification.sendEmail(<any>notification)();
-    //             break;
-    //         default:
-    //             break;
-    //     }
-    // }));
-
-    // try {
-    //     await Promise.all(promises);
-    // } catch (error) {
-    //     await pushMessage(userId, `送信できませんでした ${error.message}`);
-
-    //     return;
-    // }
-
-    // await pushMessage(userId, '送信しました');
+    await pushMessage(userId, 'sent.');
 }
 
-export async function transferCoaSeatReservationAuthorization(userId: string, __: string) {
-    await pushMessage(userId, '実装中...');
+export async function transferCoaSeatReservationAuthorization(userId: string, transactionId: string) {
+    await pushMessage(userId, 'processing...');
 
-    // await pushMessage(userId, '本予約処理をしています...');
+    const taskAdapter = sskts.adapter.task(mongoose.connection);
 
-    // const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-    // let promises: Promise<void>[] = [];
+    // タスク検索
+    const tasks = await taskAdapter.taskModel.find({
+        name: sskts.factory.taskName.SettleSeatReservation,
+        'data.transactionId': transactionId
+    }).exec();
 
-    // // 取引検索
-    // const transactionDoc4transfer = await transactionAdapter.transactionModel.findById(transactionId).exec();
+    if (tasks.length === 0) {
+        await pushMessage(userId, 'no tasks.');
 
-    // if (transactionDoc4transfer === null) {
-    //     await pushMessage(userId, 'no transaction');
-    //     return;
-    // }
+        return;
+    }
 
-    // if (transactionDoc4transfer.get('status') !== sskts.factory.transactionStatus.CLOSED) {
-    //     return;
-    // }
+    let promises: Promise<void>[] = [];
+    promises = promises.concat(tasks.map(async (task) => {
+        await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, mongoose.connection);
+    }));
 
-    // const authorizations = await transactionAdapter.findAuthorizationsById(transactionDoc4transfer.get('_id'));
-    // debug(authorizations);
-    // if (authorizations.length === 0) {
-    //     await pushMessage(userId, '仮予約データがありません');
-    //     return;
-    // }
+    try {
+        await Promise.all(promises);
+    } catch (error) {
+        await pushMessage(userId, `error:${error.message}`);
 
-    // promises = [];
-    // promises = promises.concat(authorizations.map(async (authorization) => {
-    //     switch (authorization.group) {
-    //         case sskts.factory.authorizationGroup.COA_SEAT_RESERVATION:
-    //             await sskts.service.stock.transferCOASeatReservation(<any>authorization)(
-    //                 sskts.adapter.asset(mongoose.connection),
-    //                 sskts.adapter.owner(mongoose.connection),
-    //                 sskts.adapter.performance(mongoose.connection)
-    //             );
-    //             break;
-    //         default:
-    //             break;
-    //     }
-    // }));
+        return;
+    }
 
-    // try {
-    //     await Promise.all(promises);
-    // } catch (error) {
-    //     await pushMessage(userId, `本予約できませんした ${error.message}`);
-    //     return;
-    // }
-
-    // await pushMessage(userId, '本予約完了');
+    await pushMessage(userId, 'processed.');
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * webhookルーター取引CSVテスト
+ * postback test
  *
  * @ignore
  */
@@ -10,17 +10,15 @@ import * as supertest from 'supertest';
 
 import * as app from '../../app/app';
 
-describe('POST /webhook', () => {
-    it('csv要求', async () => {
+describe('取引タスク実行', () => {
+    it('メール送信', async () => {
         await supertest(app)
             .post('/webhook')
             .send({
                 events: [
                     {
-                        message: {
-                            id: '5647872913345',
-                            text: 'csv',
-                            type: 'text'
+                        postback: {
+                            data: 'action=pushNotification&transaction=59a6824f3c2c1918dc7f4aa3'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
                         source: {
@@ -28,7 +26,7 @@ describe('POST /webhook', () => {
                             userId: 'U28fba84b4008d60291fc861e2562b34f'
                         },
                         timestamp: 1487085535998,
-                        type: 'message'
+                        type: 'postback'
                     }
                 ]
             })
@@ -38,16 +36,14 @@ describe('POST /webhook', () => {
             });
     });
 
-    it('csv期間指定', async () => {
+    it('本予約', async () => {
         await supertest(app)
             .post('/webhook')
             .send({
                 events: [
                     {
-                        message: {
-                            id: '5647872913345',
-                            text: '20170830-20170830',
-                            type: 'text'
+                        postback: {
+                            data: 'action=transferCoaSeatReservationAuthorization&transaction=59a6824f3c2c1918dc7f4aa3'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
                         source: {
@@ -55,7 +51,7 @@ describe('POST /webhook', () => {
                             userId: 'U28fba84b4008d60291fc861e2562b34f'
                         },
                         timestamp: 1487085535998,
-                        type: 'message'
+                        type: 'postback'
                     }
                 ]
             })
