@@ -72,8 +72,8 @@ function postback(event) {
                 case 'pushNotification':
                     yield PostbackController.pushNotification(userId, data.transaction);
                     break;
-                case 'transferCoaSeatReservationAuthorization':
-                    yield PostbackController.transferCoaSeatReservationAuthorization(userId, data.transaction);
+                case 'settleSeatReservation':
+                    yield PostbackController.settleSeatReservation(userId, data.transaction);
                     break;
                 default:
                     break;

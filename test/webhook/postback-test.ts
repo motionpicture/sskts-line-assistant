@@ -43,7 +43,7 @@ describe('取引タスク実行', () => {
                 events: [
                     {
                         postback: {
-                            data: 'action=transferCoaSeatReservationAuthorization&transaction=59a6824f3c2c1918dc7f4aa3'
+                            data: 'action=settleSeatReservation&transaction=59a6824f3c2c1918dc7f4aa3'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
                         source: {

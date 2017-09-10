@@ -81,7 +81,7 @@ describe('POST /webhook', () => {
                 events: [
                     {
                         postback: {
-                            data: 'action=searchTransactionByReserveNum&theater=118&reserveNum=12397'
+                            data: 'action=searchTransactionByReserveNum&theater=118&reserveNum=19879'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
                         source: {

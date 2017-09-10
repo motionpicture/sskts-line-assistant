@@ -125,10 +125,9 @@ exports.askFromWhenAndToWhen = askFromWhenAndToWhen;
 function publishURI4transactionsCSV(userId, dateFrom, dateTo) {
     return __awaiter(this, void 0, void 0, function* () {
         // 取引検索
-        const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-        const transactionDocs = yield transactionAdapter.transactionModel.find({
+        const transactionRepo = new sskts.repository.Transaction(mongoose.connection);
+        const transactionDocs = yield transactionRepo.transactionModel.find({
             typeOf: sskts.factory.transactionType.PlaceOrder,
-            'object.seatReservation': { $exists: true },
             startDate: {
                 $gte: moment(dateFrom, 'YYYYMMDD').toDate(),
                 $lt: moment(dateTo, 'YYYYMMDD').add(1, 'days').toDate()
@@ -157,12 +156,14 @@ function publishURI4transactionsCSV(userId, dateFrom, dateTo) {
                 const mvtkDiscounts = order.discounts.filter((discount) => discount.name === 'ムビチケカード');
                 return {
                     id: transaction.id,
+                    status: transaction.status,
+                    startDate: moment(transaction.startDate).format('YYYY-MM-DD HH:mm:ss'),
+                    endDate: (transaction.endDate !== undefined) ? moment(transaction.endDate).format('YYYY-MM-DD HH:mm:ss') : '',
                     theater: transaction.seller.name,
                     reserveNum: order.orderInquiryKey.confirmationNumber,
-                    closedAt: moment(transaction.endDate).format('YYYY-MM-DD HH:mm:ss'),
                     name: order.customer.name,
                     email: order.customer.email,
-                    tel: order.customer.telephone,
+                    telephone: order.customer.telephone,
                     price: order.price,
                     gmoOrderId: `${(paymentMethodCredit !== undefined) ? paymentMethodCredit.paymentMethodId : ''}`,
                     mvtkKnyknrNos: `${mvtkDiscounts.map((mvtkDiscount) => mvtkDiscount.discountCode).join('|')}`,
@@ -170,14 +171,20 @@ function publishURI4transactionsCSV(userId, dateFrom, dateTo) {
                 };
             }
             else {
+                const name = (transaction.object.customerContact !== undefined)
+                    ? `${transaction.object.customerContact.familyName} ${transaction.object.customerContact.givenName}`
+                    : '';
                 return {
                     id: transaction.id,
+                    status: transaction.status,
+                    startDate: moment(transaction.startDate).format('YYYY-MM-DD HH:mm:ss'),
+                    endDate: (transaction.endDate !== undefined) ? moment(transaction.endDate).format('YYYY-MM-DD HH:mm:ss') : '',
                     theater: transaction.seller.name,
-                    reserveNum: transaction.object.seatReservation.result.tmpReserveNum,
-                    closedAt: '',
-                    name: '',
-                    email: '',
-                    tel: '',
+                    // reserveNum: (<any>transaction.object.seatReservation).result.tmpReserveNum,
+                    reserveNum: '',
+                    name: name,
+                    email: (transaction.object.customerContact !== undefined) ? transaction.object.customerContact.email : '',
+                    telephone: (transaction.object.customerContact !== undefined) ? transaction.object.customerContact.telephone : '',
                     price: '',
                     gmoOrderId: '',
                     mvtkKnyknrNos: '',
@@ -189,18 +196,19 @@ function publishURI4transactionsCSV(userId, dateFrom, dateTo) {
         // tslint:disable-next-line:no-require-imports
         const jconv = require('jconv');
         const columns = {
-            id: '取引ID',
-            theater: '劇場コード',
-            reserveNum: '予約番号',
-            closedAt: '成立日時',
-            name: '名前',
-            email: 'メールアドレス',
-            tel: '電話番号',
-            price: '金額',
-            gmoOrderId: 'GMOオーダーID',
-            // gmoPrice: 'GMO金額',
-            mvtkKnyknrNos: 'ムビチケ購入管理番号',
-            mvtkPrice: 'ムビチケ金額'
+            id: 'transaction ID',
+            status: 'transaction status',
+            startDate: 'transaction start at',
+            endDate: 'transaction end at',
+            theater: 'seller(theater)',
+            reserveNum: 'COA reserve number',
+            name: 'customer name',
+            email: 'customer email',
+            telephone: 'customer telephone',
+            price: 'price',
+            gmoOrderId: 'GMO orderId',
+            mvtkKnyknrNos: 'mvtk No',
+            mvtkPrice: 'mvtk price'
         };
         const sasUrl = yield new Promise((resolve, reject) => {
             csvStringify(transactionDetails, {

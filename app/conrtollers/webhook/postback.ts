@@ -24,7 +24,7 @@ export async function searchTransactionByReserveNum(userId: string, reserveNum: 
     await pushMessage(userId, '予約番号で検索しています...');
 
     // 取引検索
-    const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+    const transactionAdapter = new sskts.repository.Transaction(mongoose.connection);
     const doc = await transactionAdapter.transactionModel.findOne(
         {
             // tslint:disable-next-line:no-magic-numbers
@@ -56,7 +56,7 @@ export async function searchTransactionByTel(userId: string, tel: string, __: st
     // await pushMessage(userId, '電話番号で検索しています...');
 
     // 取引検索
-    // const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+    // const transactionAdapter = sskts.repository.transaction(mongoose.connection);
     // const transactionDoc = await transactionAdapter.transactionModel.findOne(
     //     {
     //         status: sskts.factory.transactionStatus.CLOSED,
@@ -86,9 +86,9 @@ export async function searchTransactionByTel(userId: string, tel: string, __: st
 async function pushTransactionDetails(userId: string, orderNumber: string) {
     await pushMessage(userId, `${orderNumber}の取引詳細をまとめています...`);
 
-    const orderAdapter = sskts.adapter.order(mongoose.connection);
-    const taskAdapter = sskts.adapter.task(mongoose.connection);
-    const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+    const orderAdapter = new sskts.repository.Order(mongoose.connection);
+    const taskAdapter = new sskts.repository.Task(mongoose.connection);
+    const transactionAdapter = new sskts.repository.Transaction(mongoose.connection);
 
     // 注文検索
     const orderDoc = await orderAdapter.orderModel.findOne({
@@ -118,8 +118,8 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     const settleSeatReservationTask = <sskts.factory.task.settleSeatReservation.ITask>tasks.find(
         (task) => task.name === sskts.factory.taskName.SettleSeatReservation
     );
-    const settleGMOTask = <sskts.factory.task.settleGMO.ITask>tasks.find(
-        (task) => task.name === sskts.factory.taskName.SettleGMO
+    const settleCreditCardTask = <sskts.factory.task.settleCreditCard.ITask>tasks.find(
+        (task) => task.name === sskts.factory.taskName.SettleCreditCard
     );
 
     const orderItems = order.acceptedOffers;
@@ -144,14 +144,14 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
 ${moment(placeOrderTransaction.startDate).format('YYYY-MM-DD HH:mm:ss')} 開始
 ${moment(placeOrderTransaction.endDate).format('YYYY-MM-DD HH:mm:ss')} 成立
 ${(settleSeatReservationTask.status === sskts.factory.taskStatus.Executed) ? `${moment(<Date>settleSeatReservationTask.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')} 本予約` : ''}
-${(settleGMOTask.status === sskts.factory.taskStatus.Executed) ? `${moment(<Date>settleGMOTask.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')} 実売上` : ''}
+${(settleCreditCardTask.status === sskts.factory.taskStatus.Executed) ? `${moment(<Date>settleCreditCardTask.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')} 実売上` : ''}
 --------------------
 購入者情報
 --------------------
 ${order.customer.name}
 ${order.customer.telephone}
 ${order.customer.email}
-${(order.customer.memberOf !== undefined) ? `会員:${order.customer.memberOf.membershipNumber}` : ''}
+${(order.customer.memberOf !== undefined) ? `${order.customer.memberOf.programName} ${order.customer.memberOf.membershipNumber}` : ''}
 --------------------
 座席予約
 --------------------
@@ -203,7 +203,7 @@ ${orderItems.map((orderItem) => `●${orderItem.itemOffered.reservedTicket.ticke
                             {
                                 type: 'postback',
                                 label: '本予約',
-                                data: `action=transferCoaSeatReservationAuthorization&transaction=${placeOrderTransaction.id}`
+                                data: `action=settleSeatReservation&transaction=${placeOrderTransaction.id}`
                             }
                         ]
                     }
@@ -214,9 +214,9 @@ ${orderItems.map((orderItem) => `●${orderItem.itemOffered.reservedTicket.ticke
 }
 
 export async function pushNotification(userId: string, transactionId: string) {
-    await pushMessage(userId, 'sending...');
+    await pushMessage(userId, '送信中...');
 
-    const taskAdapter = sskts.adapter.task(mongoose.connection);
+    const taskAdapter = new sskts.repository.Task(mongoose.connection);
 
     // タスク検索
     const tasks = await taskAdapter.taskModel.find({
@@ -225,7 +225,7 @@ export async function pushNotification(userId: string, transactionId: string) {
     }).exec();
 
     if (tasks.length === 0) {
-        await pushMessage(userId, 'no tasks.');
+        await pushMessage(userId, 'Task not found.');
 
         return;
     }
@@ -238,18 +238,18 @@ export async function pushNotification(userId: string, transactionId: string) {
     try {
         await Promise.all(promises);
     } catch (error) {
-        await pushMessage(userId, `error:${error.message}`);
+        await pushMessage(userId, `送信失敗:${error.message}`);
 
         return;
     }
 
-    await pushMessage(userId, 'sent.');
+    await pushMessage(userId, '送信完了');
 }
 
-export async function transferCoaSeatReservationAuthorization(userId: string, transactionId: string) {
-    await pushMessage(userId, 'processing...');
+export async function settleSeatReservation(userId: string, transactionId: string) {
+    await pushMessage(userId, '本予約中...');
 
-    const taskAdapter = sskts.adapter.task(mongoose.connection);
+    const taskAdapter = new sskts.repository.Task(mongoose.connection);
 
     // タスク検索
     const tasks = await taskAdapter.taskModel.find({
@@ -258,25 +258,22 @@ export async function transferCoaSeatReservationAuthorization(userId: string, tr
     }).exec();
 
     if (tasks.length === 0) {
-        await pushMessage(userId, 'no tasks.');
+        await pushMessage(userId, 'Task not found.');
 
         return;
     }
-
-    let promises: Promise<void>[] = [];
-    promises = promises.concat(tasks.map(async (task) => {
-        await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, mongoose.connection);
-    }));
 
     try {
-        await Promise.all(promises);
+        await Promise.all(tasks.map(async (task) => {
+            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, mongoose.connection);
+        }));
     } catch (error) {
-        await pushMessage(userId, `error:${error.message}`);
+        await pushMessage(userId, `本予約失敗:${error.message}`);
 
         return;
     }
 
-    await pushMessage(userId, 'processed.');
+    await pushMessage(userId, '本予約完了');
 }
 
 /**

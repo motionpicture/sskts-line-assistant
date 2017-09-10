@@ -70,8 +70,8 @@ export async function postback(event: any) {
                 await PostbackController.pushNotification(userId, data.transaction);
                 break;
 
-            case 'transferCoaSeatReservationAuthorization':
-                await PostbackController.transferCoaSeatReservationAuthorization(userId, data.transaction);
+            case 'settleSeatReservation':
+                await PostbackController.settleSeatReservation(userId, data.transaction);
                 break;
 
             default:
