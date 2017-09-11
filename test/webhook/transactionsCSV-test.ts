@@ -46,7 +46,7 @@ describe('POST /webhook', () => {
                     {
                         message: {
                             id: '5647872913345',
-                            text: '20170830-20170830',
+                            text: '20170910-20170910',
                             type: 'text'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
