@@ -74,6 +74,10 @@ export async function postback(event: any) {
                 await PostbackController.settleSeatReservation(userId, data.transaction);
                 break;
 
+            case 'createOwnershipInfos':
+                await PostbackController.createOwnershipInfos(userId, data.transaction);
+                break;
+
             default:
                 break;
         }

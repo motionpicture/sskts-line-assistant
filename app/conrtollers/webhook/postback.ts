@@ -8,6 +8,7 @@ import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
 import * as request from 'request-promise-native';
+import * as util from 'util';
 
 const debug = createDebug('sskts-line-assistant:controller:webhook:postback');
 const MESSAGE_TRANSACTION_NOT_FOUND = '該当取引はありません';
@@ -108,72 +109,90 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
         'result.order.orderNumber': orderNumber,
         typeOf: sskts.factory.transactionType.PlaceOrder
     }).then((doc: mongoose.Document) => doc.toObject());
-    debug('placeOrderTransaction:', placeOrderTransaction);
+    const report = sskts.service.transaction.placeOrder.transaction2report(placeOrderTransaction);
+    debug('report:', report);
 
+    // 非同期タスク検索
     const tasks = <sskts.factory.task.ITask[]>await taskAdapter.taskModel.find({
         'data.transactionId': placeOrderTransaction.id
     }).exec().then((docs) => docs.map((doc) => doc.toObject()));
 
     // タスクの実行日時を調べる
-    const settleSeatReservationTask = <sskts.factory.task.settleSeatReservation.ITask>tasks.find(
-        (task) => task.name === sskts.factory.taskName.SettleSeatReservation
-    );
-    const settleCreditCardTask = <sskts.factory.task.settleCreditCard.ITask>tasks.find(
-        (task) => task.name === sskts.factory.taskName.SettleCreditCard
-    );
+    const taskStrs = tasks.map((task) => {
+        let taskNameStr = '??';
+        switch (task.name) {
+            case sskts.factory.taskName.SettleSeatReservation:
+                taskNameStr = '本予約';
+                break;
+            case sskts.factory.taskName.SettleCreditCard:
+                taskNameStr = '売上';
+                break;
+            case sskts.factory.taskName.SettleMvtk:
+                taskNameStr = 'ムビ処理';
+                break;
+            case sskts.factory.taskName.CreateOrder:
+                taskNameStr = '注文作成';
+                break;
+            case sskts.factory.taskName.CreateOwnershipInfos:
+                taskNameStr = '所有権作成';
+                break;
+            default:
+                break;
+        }
 
-    const orderItems = order.acceptedOffers;
-    const screeningEvent = orderItems[0].itemOffered.reservationFor;
-    debug('screeningEvent:', screeningEvent);
-    const ticketsStr = orderItems.map(
-        // tslint:disable-next-line:max-line-length
-        (orderItem) => `●${orderItem.itemOffered.reservedTicket.ticketedSeat.seatNumber} ${orderItem.itemOffered.reservedTicket.coaTicketInfo.ticketName} ￥${orderItem.itemOffered.reservedTicket.coaTicketInfo.salePrice}`
-    ).join('\n');
+        return util.format(
+            '%s %s',
+            (task.status === sskts.factory.taskStatus.Executed && task.lastTriedAt !== null)
+                ? moment(task.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')
+                : '---------- --:--:--',
+            taskNameStr
+        );
+    }).join('\n');
 
     // tslint:disable:max-line-length
     const transactionDetails = `--------------------
-取引概要
+注文取引概要
 --------------------
-取引ステータス: ${placeOrderTransaction.status}
+取引ステータス: ${report.status}
 注文ステータス: ${order.orderStatus}
-予約番号: ${order.orderInquiryKey.confirmationNumber}
-劇場: ${order.orderInquiryKey.theaterCode}
+予約番号: ${report.confirmationNumber}
+劇場: ${report.superEventLocation}
 --------------------
 注文取引状況
 --------------------
-${moment(placeOrderTransaction.startDate).format('YYYY-MM-DD HH:mm:ss')} 開始
-${moment(placeOrderTransaction.endDate).format('YYYY-MM-DD HH:mm:ss')} 成立
-${(settleSeatReservationTask.status === sskts.factory.taskStatus.Executed) ? `${moment(<Date>settleSeatReservationTask.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')} 本予約` : ''}
-${(settleCreditCardTask.status === sskts.factory.taskStatus.Executed) ? `${moment(<Date>settleCreditCardTask.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')} 実売上` : ''}
+${moment(report.startDate).format('YYYY-MM-DD HH:mm:ss')} 開始
+${moment(report.endDate).format('YYYY-MM-DD HH:mm:ss')} 成立
+${taskStrs}
 --------------------
 購入者情報
 --------------------
-${order.customer.name}
-${order.customer.telephone}
-${order.customer.email}
+${report.name}
+${report.telephone}
+${report.email}
 ${(order.customer.memberOf !== undefined) ? `${order.customer.memberOf.programName} ${order.customer.memberOf.membershipNumber}` : ''}
 --------------------
 座席予約
 --------------------
-${screeningEvent.superEvent.name.ja}
-${screeningEvent.superEvent.name.en}
-${moment(screeningEvent.startDate).format('YYYY-MM-DD HH:mm')}-${moment(screeningEvent.endDate).format('HH:mm')}
-@${screeningEvent.superEvent.location.name.ja} ${screeningEvent.location.name.ja}
-${ticketsStr}
+${report.eventName}
+${moment(report.eventStartDate).format('YYYY-MM-DD HH:mm')}-${moment(report.eventEndDate).format('HH:mm')}
+@${report.superEventLocation} ${report.eventLocation}
+${report.reservedTickets}
 --------------------
 決済方法
 --------------------
-${order.paymentMethods[0].name}
-${order.paymentMethods[0].paymentMethodId}
-${order.price} ${order.priceCurrency}
+${report.paymentMethod}
+${report.paymentMethodId}
+${report.price}
 --------------------
-ムビチケ
+割引
 --------------------
-${(order.discounts.length > 0) ? order.discounts.map((discount) => discount.discountCode).join('\n') : ''}
+${report.discounts}
+${report.discountCodes}
+${report.discountPrices}
 --------------------
-QRコード
+QR
 --------------------
-${orderItems.map((orderItem) => `●${orderItem.itemOffered.reservedTicket.ticketedSeat.seatNumber} ${orderItem.itemOffered.reservedTicket.ticketToken}`).join('\n')}
+${order.acceptedOffers.map((offer) => `●${offer.itemOffered.reservedTicket.ticketedSeat.seatNumber} ${offer.itemOffered.reservedTicket.ticketToken}`).join('\n')}
 `
         ;
 
@@ -204,6 +223,11 @@ ${orderItems.map((orderItem) => `●${orderItem.itemOffered.reservedTicket.ticke
                                 type: 'postback',
                                 label: '本予約',
                                 data: `action=settleSeatReservation&transaction=${placeOrderTransaction.id}`
+                            },
+                            {
+                                type: 'postback',
+                                label: '所有権作成',
+                                data: `action=createOwnershipInfos&transaction=${placeOrderTransaction.id}`
                             }
                         ]
                     }
@@ -274,6 +298,36 @@ export async function settleSeatReservation(userId: string, transactionId: strin
     }
 
     await pushMessage(userId, '本予約完了');
+}
+
+export async function createOwnershipInfos(userId: string, transactionId: string) {
+    await pushMessage(userId, '所有権作成中...');
+
+    const taskAdapter = new sskts.repository.Task(mongoose.connection);
+
+    // タスク検索
+    const tasks = await taskAdapter.taskModel.find({
+        name: sskts.factory.taskName.CreateOwnershipInfos,
+        'data.transactionId': transactionId
+    }).exec();
+
+    if (tasks.length === 0) {
+        await pushMessage(userId, 'Task not found.');
+
+        return;
+    }
+
+    try {
+        await Promise.all(tasks.map(async (task) => {
+            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, mongoose.connection);
+        }));
+    } catch (error) {
+        await pushMessage(userId, `所有権作成失敗:${error.message}`);
+
+        return;
+    }
+
+    await pushMessage(userId, '所有権作成完了');
 }
 
 /**

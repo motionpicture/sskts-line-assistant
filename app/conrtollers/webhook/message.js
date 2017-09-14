@@ -20,12 +20,13 @@ function pushHowToUse(userId) {
     return __awaiter(this, void 0, void 0, function* () {
         // tslint:disable-next-line:no-multiline-string
         const text = `How to use
---------------------
-予約照会
---------------------
 ******** new! ********
+csvの項目が充実しました！
+所有権作成タスクを実行できるようになりました！
 ******** new! ********
-
+--------------------
+取引照会
+--------------------
 [劇場コード]-[予約番号 or 電話番号]と入力
 例:118-2425
 
@@ -120,10 +121,11 @@ exports.askFromWhenAndToWhen = askFromWhenAndToWhen;
  */
 function publishURI4transactionsCSV(userId, dateFrom, dateThrough) {
     return __awaiter(this, void 0, void 0, function* () {
-        const sasUrl = yield sskts.service.transaction.placeOrder.download({
+        const csv = yield sskts.service.transaction.placeOrder.download({
             startFrom: moment(dateFrom, 'YYYYMMDD').toDate(),
             startThrough: moment(dateThrough, 'YYYYMMDD').add(1, 'day').toDate()
         }, 'csv')(new sskts.repository.Transaction(sskts.mongoose.connection));
+        const sasUrl = yield sskts.service.util.uploadFile(`sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`, csv)();
         yield request.post({
             simple: false,
             url: 'https://api.line.me/v2/bot/message/push',

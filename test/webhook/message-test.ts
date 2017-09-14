@@ -1,5 +1,5 @@
 /**
- * webhookルーター取引CSVテスト
+ * message test
  *
  * @ignore
  */
@@ -10,7 +10,7 @@ import * as supertest from 'supertest';
 
 import * as app from '../../app/app';
 
-describe('POST /webhook', () => {
+describe('csvダウンロード', () => {
     it('csv要求', async () => {
         await supertest(app)
             .post('/webhook')
@@ -46,7 +46,7 @@ describe('POST /webhook', () => {
                     {
                         message: {
                             id: '5647872913345',
-                            text: '20170910-20170910',
+                            text: '20170914-20170914',
                             type: 'text'
                         },
                         replyToken: '26d0dd0923a94583871ecd7e6efec8e2',

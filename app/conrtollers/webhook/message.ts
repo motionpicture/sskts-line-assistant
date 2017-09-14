@@ -12,12 +12,13 @@ const debug = createDebug('sskts-line-assistant:controller:webhook:message');
 export async function pushHowToUse(userId: string) {
     // tslint:disable-next-line:no-multiline-string
     const text = `How to use
---------------------
-予約照会
---------------------
 ******** new! ********
+csvの項目が充実しました！
+所有権作成タスクを実行できるようになりました！
 ******** new! ********
-
+--------------------
+取引照会
+--------------------
 [劇場コード]-[予約番号 or 電話番号]と入力
 例:118-2425
 
@@ -108,13 +109,15 @@ export async function askFromWhenAndToWhen(userId: string) {
  * 取引CSVダウンロードURIを発行する
  */
 export async function publishURI4transactionsCSV(userId: string, dateFrom: string, dateThrough: string) {
-    const sasUrl = await sskts.service.transaction.placeOrder.download(
+    const csv = await sskts.service.transaction.placeOrder.download(
         {
             startFrom: moment(dateFrom, 'YYYYMMDD').toDate(),
             startThrough: moment(dateThrough, 'YYYYMMDD').add(1, 'day').toDate()
         },
         'csv'
     )(new sskts.repository.Transaction(sskts.mongoose.connection));
+
+    const sasUrl = await sskts.service.util.uploadFile(`sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`, csv)();
 
     await request.post({
         simple: false,

@@ -1,6 +1,6 @@
 "use strict";
 /**
- * webhookルーター取引CSVテスト
+ * message test
  *
  * @ignore
  */
@@ -17,7 +17,7 @@ const assert = require("assert");
 const HTTPStatus = require("http-status");
 const supertest = require("supertest");
 const app = require("../../app/app");
-describe('POST /webhook', () => {
+describe('csvダウンロード', () => {
     it('csv要求', () => __awaiter(this, void 0, void 0, function* () {
         yield supertest(app)
             .post('/webhook')
@@ -52,7 +52,7 @@ describe('POST /webhook', () => {
                 {
                     message: {
                         id: '5647872913345',
-                        text: '20170910-20170910',
+                        text: '20170914-20170914',
                         type: 'text'
                     },
                     replyToken: '26d0dd0923a94583871ecd7e6efec8e2',

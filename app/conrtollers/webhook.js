@@ -75,6 +75,9 @@ function postback(event) {
                 case 'settleSeatReservation':
                     yield PostbackController.settleSeatReservation(userId, data.transaction);
                     break;
+                case 'createOwnershipInfos':
+                    yield PostbackController.createOwnershipInfos(userId, data.transaction);
+                    break;
                 default:
                     break;
             }
