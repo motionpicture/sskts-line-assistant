@@ -125,7 +125,10 @@ function publishURI4transactionsCSV(userId, dateFrom, dateThrough) {
             startFrom: moment(dateFrom, 'YYYYMMDD').toDate(),
             startThrough: moment(dateThrough, 'YYYYMMDD').add(1, 'day').toDate()
         }, 'csv')(new sskts.repository.Transaction(sskts.mongoose.connection));
-        const sasUrl = yield sskts.service.util.uploadFile(`sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`, csv)();
+        const sasUrl = yield sskts.service.util.uploadFile({
+            fileName: `sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`,
+            text: csv
+        })();
         yield request.post({
             simple: false,
             url: 'https://api.line.me/v2/bot/message/push',

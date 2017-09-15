@@ -119,7 +119,7 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
 
     // タスクの実行日時を調べる
     const taskStrs = tasks.map((task) => {
-        let taskNameStr = '??';
+        let taskNameStr = '???';
         switch (task.name) {
             case sskts.factory.taskName.SettleSeatReservation:
                 taskNameStr = '本予約';
@@ -135,6 +135,9 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
                 break;
             case sskts.factory.taskName.CreateOwnershipInfos:
                 taskNameStr = '所有権作成';
+                break;
+            case sskts.factory.taskName.SendEmailNotification:
+                taskNameStr = 'メール送信';
                 break;
             default:
                 break;

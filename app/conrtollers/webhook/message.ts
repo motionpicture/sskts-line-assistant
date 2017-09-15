@@ -117,7 +117,10 @@ export async function publishURI4transactionsCSV(userId: string, dateFrom: strin
         'csv'
     )(new sskts.repository.Transaction(sskts.mongoose.connection));
 
-    const sasUrl = await sskts.service.util.uploadFile(`sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`, csv)();
+    const sasUrl = await sskts.service.util.uploadFile({
+        fileName: `sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`,
+        text: csv
+    })();
 
     await request.post({
         simple: false,
