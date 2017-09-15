@@ -157,10 +157,10 @@ ${taskStrs}
 --------------------
 購入者情報
 --------------------
-${report.name}
-${report.telephone}
-${report.email}
-${(order.customer.memberOf !== undefined) ? `${order.customer.memberOf.programName} ${order.customer.memberOf.membershipNumber}` : ''}
+${report.customer.name}
+${report.customer.telephone}
+${report.customer.email}
+${(report.customer.memberOf !== undefined) ? `${report.customer.memberOf.membershipNumber}` : ''}
 --------------------
 座席予約
 --------------------
@@ -179,7 +179,7 @@ ${report.price}
 --------------------
 ${report.discounts}
 ${report.discountCodes}
-${report.discountPrices}
+￥${report.discountPrices}
 --------------------
 QR
 --------------------

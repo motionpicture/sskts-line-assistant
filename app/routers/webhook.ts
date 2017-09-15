@@ -10,10 +10,10 @@ import { OK } from 'http-status';
 
 import * as WebhookController from '../conrtollers/webhook';
 
-const router = express.Router();
+const webhookRouter = express.Router();
 const debug = createDebug('sskts-linereport:router:webhook');
 
-router.all('/', async (req, res) => {
+webhookRouter.all('/', async (req, res) => {
     debug('body:', JSON.stringify(req.body));
 
     try {
@@ -60,4 +60,4 @@ router.all('/', async (req, res) => {
     res.status(OK).send('ok');
 });
 
-export default router;
+export default webhookRouter;
