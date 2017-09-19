@@ -10,7 +10,7 @@
   ],
   "config": {},
   "dependencies": {
-    "@motionpicture/sskts-domain": "git+https://tetsu:M0P!Xmopix@m-p.backlog.jp/git/SSKTS/domain.git#feature/SSKTS-533",
+    "@motionpicture/sskts-domain": "^23.0.0-alpha.0",
     "body-parser": "^1.18.1",
     "debug": "^2.6.8",
     "express": "^4.15.4",
@@ -34,7 +34,7 @@
     "mocha": "^3.5.3",
     "nsp": "^2.8.0",
     "rimraf": "^2.6.2",
-    "snyk": "^1.40.2",
+    "snyk": "^1.40.3",
     "supertest": "^3.0.0",
     "tslint": "^5.7.0",
     "tslint-microsoft-contrib": "^5.0.1",
