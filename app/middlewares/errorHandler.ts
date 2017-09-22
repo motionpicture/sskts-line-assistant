@@ -12,6 +12,7 @@ export default (err: any, __: Request, res: Response, next: NextFunction) => {
 
     if (res.headersSent) {
         next(err);
+
         return;
     }
 

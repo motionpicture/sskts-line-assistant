@@ -15,25 +15,25 @@ const debug = createDebug('sskts-linereport:controller:webhook');
  * メッセージが送信されたことを示すEvent Objectです。
  */
 export async function message(event: any) {
-    const message: string = event.message.text;
+    const messageText: string = event.message.text;
     const userId = event.source.userId;
 
     try {
         switch (true) {
             // [劇場コード]-[予約番号 or 電話番号]で検索
-            case /^\d{3}-\d{1,12}$/.test(message):
-                await MessageController.pushButtonsReserveNumOrTel(userId, message);
+            case /^\d{3}-\d{1,12}$/.test(messageText):
+                await MessageController.pushButtonsReserveNumOrTel(userId, messageText);
                 break;
 
             // 取引csv要求
-            case /^csv$/.test(message):
+            case /^csv$/.test(messageText):
                 await MessageController.askFromWhenAndToWhen(userId);
                 break;
 
             // 取引csv期間指定
-            case /^\d{8}-\d{8}$/.test(message):
+            case /^\d{8}-\d{8}$/.test(messageText):
                 // tslint:disable-next-line:no-magic-numbers
-                await MessageController.publishURI4transactionsCSV(userId, message.substr(0, 8), message.substr(9, 8));
+                await MessageController.publishURI4transactionsCSV(userId, messageText.substr(0, 8), messageText.substr(9, 8));
                 break;
 
             default:
@@ -70,8 +70,12 @@ export async function postback(event: any) {
                 await PostbackController.pushNotification(userId, data.transaction);
                 break;
 
-            case 'transferCoaSeatReservationAuthorization':
-                await PostbackController.transferCoaSeatReservationAuthorization(userId, data.transaction);
+            case 'settleSeatReservation':
+                await PostbackController.settleSeatReservation(userId, data.transaction);
+                break;
+
+            case 'createOwnershipInfos':
+                await PostbackController.createOwnershipInfos(userId, data.transaction);
                 break;
 
             default:
@@ -89,7 +93,6 @@ export async function postback(event: any) {
  */
 export async function follow(event: any) {
     debug('event is', event);
-    return;
 }
 
 /**
@@ -97,7 +100,6 @@ export async function follow(event: any) {
  */
 export async function unfollow(event: any) {
     debug('event is', event);
-    return;
 }
 
 /**
@@ -105,7 +107,6 @@ export async function unfollow(event: any) {
  */
 export async function join(event: any) {
     debug('event is', event);
-    return;
 }
 
 /**
@@ -113,7 +114,6 @@ export async function join(event: any) {
  */
 export async function leave(event: any) {
     debug('event is', event);
-    return;
 }
 
 /**
@@ -121,7 +121,6 @@ export async function leave(event: any) {
  */
 export async function beacon(event: any) {
     debug('event is', event);
-    return;
 }
 
 /**
