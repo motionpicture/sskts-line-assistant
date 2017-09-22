@@ -58,22 +58,23 @@ npmでローカルサーバーを起動。
 
 ## Required environment variables
 ```shell
-    set NODE_ENV=**********
-    set MONGOLAB_URI=**********
-    set LINE_BOT_CHANNEL_SECRET=**********
-    set LINE_BOT_CHANNEL_ACCESS_TOKEN=**********
-    set SENDGRID_API_KEY=**********
-    set GMO_ENDPOINT=**********
-    set COA_ENDPOINT=**********
-    set COA_REFRESH_TOKEN=**********
-    set AZURE_STORAGE_CONNECTION_STRING=**********csv保管azure storage接続文字列**********
+set NPM_TOKEN=**********npm private packageをインストールするために必要なトークン**********
+set NODE_ENV=**********
+set MONGOLAB_URI=**********
+set LINE_BOT_CHANNEL_SECRET=**********
+set LINE_BOT_CHANNEL_ACCESS_TOKEN=**********
+set SENDGRID_API_KEY=**********
+set GMO_ENDPOINT=**********
+set COA_ENDPOINT=**********
+set COA_REFRESH_TOKEN=**********
+set AZURE_STORAGE_CONNECTION_STRING=**********csv保管azure storage接続文字列**********
 ```
 
 only on Aure WebApps
 
 ```shell
-    set WEBSITE_NODE_DEFAULT_VERSION=**********
-    set WEBSITE_TIME_ZONE=Tokyo Standard Time
+set WEBSITE_NODE_DEFAULT_VERSION=**********
+set WEBSITE_TIME_ZONE=Tokyo Standard Time
 ```
 
 
