@@ -8,7 +8,7 @@ import * as assert from 'assert';
 import * as HTTPStatus from 'http-status';
 import * as supertest from 'supertest';
 
-import * as app from '../app/app';
+import * as app from '../app';
 
 describe('POST /webhook', () => {
     it('found', async () => {
