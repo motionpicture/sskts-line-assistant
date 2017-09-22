@@ -1,6 +1,7 @@
 "use strict";
 /**
  * LINE webhook messageコントローラー
+ * @namespace app.controllers.webhook.message
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -15,7 +16,14 @@ const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const request = require("request-promise-native");
+const LINE = require("../line");
 const debug = createDebug('sskts-line-assistant:controller:webhook:message');
+/**
+ * 使い方を送信する
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.message
+ */
 function pushHowToUse(userId) {
     return __awaiter(this, void 0, void 0, function* () {
         // tslint:disable-next-line:no-multiline-string
@@ -34,26 +42,15 @@ csvの項目が充実しました！
 取引CSVダウンロード
 --------------------
 「csv」と入力`;
-        yield request.post({
-            simple: false,
-            url: 'https://api.line.me/v2/bot/message/push',
-            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-            json: true,
-            body: {
-                to: userId,
-                messages: [
-                    {
-                        type: 'text',
-                        text: text
-                    }
-                ]
-            }
-        }).promise();
+        yield LINE.pushMessage(userId, text);
     });
 }
 exports.pushHowToUse = pushHowToUse;
 /**
  * 予約番号or電話番号のボタンを送信する
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.message
  */
 function pushButtonsReserveNumOrTel(userId, message) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -98,49 +95,35 @@ function pushButtonsReserveNumOrTel(userId, message) {
 exports.pushButtonsReserveNumOrTel = pushButtonsReserveNumOrTel;
 /**
  * 日付選択を求める
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.message
  */
 function askFromWhenAndToWhen(userId) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield request.post({
-            simple: false,
-            url: 'https://api.line.me/v2/bot/message/push',
-            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-            json: true,
-            body: {
-                to: userId,
-                messages: [
-                    { type: 'text', text: 'いつからいつまでほしい？YYYYMMDD-YYYYMMDDで教えてね。' }
-                ]
-            }
-        }).promise();
+        yield LINE.pushMessage(userId, '期間をYYYYMMDD-YYYYMMDD形式で教えてください。');
     });
 }
 exports.askFromWhenAndToWhen = askFromWhenAndToWhen;
 /**
  * 取引CSVダウンロードURIを発行する
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.message
  */
 function publishURI4transactionsCSV(userId, dateFrom, dateThrough) {
     return __awaiter(this, void 0, void 0, function* () {
+        yield LINE.pushMessage(userId, `${dateFrom}-${dateThrough}の取引を検索しています...`);
         const csv = yield sskts.service.transaction.placeOrder.download({
             startFrom: moment(dateFrom, 'YYYYMMDD').toDate(),
             startThrough: moment(dateThrough, 'YYYYMMDD').add(1, 'day').toDate()
         }, 'csv')(new sskts.repository.Transaction(sskts.mongoose.connection));
+        yield LINE.pushMessage(userId, 'csvを作成しています...');
         const sasUrl = yield sskts.service.util.uploadFile({
             fileName: `sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`,
             text: csv
         })();
-        yield request.post({
-            simple: false,
-            url: 'https://api.line.me/v2/bot/message/push',
-            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-            json: true,
-            body: {
-                to: userId,
-                messages: [
-                    { type: 'text', text: `download -> ${sasUrl} ` }
-                ]
-            }
-        }).promise();
+        yield LINE.pushMessage(userId, `download -> ${sasUrl} `);
     });
 }
 exports.publishURI4transactionsCSV = publishURI4transactionsCSV;

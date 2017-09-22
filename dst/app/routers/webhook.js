@@ -1,7 +1,6 @@
 "use strict";
 /**
  * webhookルーター
- *
  * @ignore
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -18,7 +17,7 @@ const express = require("express");
 const http_status_1 = require("http-status");
 const WebhookController = require("../conrtollers/webhook");
 const webhookRouter = express.Router();
-const debug = createDebug('sskts-linereport:router:webhook');
+const debug = createDebug('sskts-line-assistant:router:webhook');
 webhookRouter.all('/', (req, res) => __awaiter(this, void 0, void 0, function* () {
     debug('body:', JSON.stringify(req.body));
     try {

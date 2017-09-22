@@ -25,6 +25,7 @@
         "noResolve": false,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
+        "outDir": "./dst",
         "preserveConstEnums": false,
         "pretty": false,
         "removeComments": false,
@@ -36,7 +37,10 @@
         "target": "es6",
         "watch": false
     },
+    "include": [
+        "src"
+    ],
     "exclude": [
-        "node_modules"
+        "**/*.spec.ts"
     ]
 }

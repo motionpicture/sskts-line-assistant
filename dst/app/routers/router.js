@@ -1,7 +1,6 @@
 "use strict";
 /**
- * ルーター
- *
+ * defaultルーター
  * @ignore
  */
 Object.defineProperty(exports, "__esModule", { value: true });
