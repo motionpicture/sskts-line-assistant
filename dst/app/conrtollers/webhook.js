@@ -1,6 +1,7 @@
 "use strict";
 /**
  * LINE webhookコントローラー
+ * @namespace app.controllers.webhook
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -13,10 +14,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const createDebug = require("debug");
 const querystring = require("querystring");
-const request = require("request-promise-native");
+const LINE = require("./line");
 const MessageController = require("./webhook/message");
 const PostbackController = require("./webhook/postback");
-const debug = createDebug('sskts-linereport:controller:webhook');
+const debug = createDebug('sskts-line-assistant:controller:webhook');
 /**
  * メッセージが送信されたことを示すEvent Objectです。
  */
@@ -48,7 +49,7 @@ function message(event) {
         catch (error) {
             console.error(error);
             // エラーメッセージ表示
-            yield pushMessage(userId, error.toString());
+            yield LINE.pushMessage(userId, error.toString());
         }
     });
 }
@@ -85,7 +86,7 @@ function postback(event) {
         catch (error) {
             console.error(error);
             // エラーメッセージ表示
-            yield pushMessage(userId, error.toString());
+            yield LINE.pushMessage(userId, error.toString());
         }
     });
 }
@@ -135,29 +136,3 @@ function beacon(event) {
     });
 }
 exports.beacon = beacon;
-/**
- * メッセージ送信
- *
- * @param {string} userId
- * @param {string} text
- */
-function pushMessage(userId, text) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // push message
-        yield request.post({
-            simple: false,
-            url: 'https://api.line.me/v2/bot/message/push',
-            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-            json: true,
-            body: {
-                to: userId,
-                messages: [
-                    {
-                        type: 'text',
-                        text: text
-                    }
-                ]
-            }
-        }).promise();
-    });
-}

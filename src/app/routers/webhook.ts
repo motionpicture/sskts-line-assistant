@@ -1,6 +1,5 @@
 /**
  * webhookルーター
- *
  * @ignore
  */
 
@@ -11,7 +10,7 @@ import { OK } from 'http-status';
 import * as WebhookController from '../conrtollers/webhook';
 
 const webhookRouter = express.Router();
-const debug = createDebug('sskts-linereport:router:webhook');
+const debug = createDebug('sskts-line-assistant:router:webhook');
 
 webhookRouter.all('/', async (req, res) => {
     debug('body:', JSON.stringify(req.body));

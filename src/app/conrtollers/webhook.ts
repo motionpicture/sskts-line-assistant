@@ -1,15 +1,16 @@
 /**
  * LINE webhookコントローラー
+ * @namespace app.controllers.webhook
  */
 
 import * as createDebug from 'debug';
 import * as querystring from 'querystring';
-import * as request from 'request-promise-native';
 
+import * as LINE from './line';
 import * as MessageController from './webhook/message';
 import * as PostbackController from './webhook/postback';
 
-const debug = createDebug('sskts-linereport:controller:webhook');
+const debug = createDebug('sskts-line-assistant:controller:webhook');
 
 /**
  * メッセージが送信されたことを示すEvent Objectです。
@@ -44,7 +45,7 @@ export async function message(event: any) {
     } catch (error) {
         console.error(error);
         // エラーメッセージ表示
-        await pushMessage(userId, error.toString());
+        await LINE.pushMessage(userId, error.toString());
     }
 }
 
@@ -84,7 +85,7 @@ export async function postback(event: any) {
     } catch (error) {
         console.error(error);
         // エラーメッセージ表示
-        await pushMessage(userId, error.toString());
+        await LINE.pushMessage(userId, error.toString());
     }
 }
 
@@ -121,29 +122,4 @@ export async function leave(event: any) {
  */
 export async function beacon(event: any) {
     debug('event is', event);
-}
-
-/**
- * メッセージ送信
- *
- * @param {string} userId
- * @param {string} text
- */
-async function pushMessage(userId: string, text: string) {
-    // push message
-    await request.post({
-        simple: false,
-        url: 'https://api.line.me/v2/bot/message/push',
-        auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-        json: true,
-        body: {
-            to: userId,
-            messages: [
-                {
-                    type: 'text',
-                    text: text
-                }
-            ]
-        }
-    }).promise();
 }

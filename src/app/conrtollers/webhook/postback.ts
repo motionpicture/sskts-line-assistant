@@ -1,8 +1,8 @@
 /**
  * LINE webhook postbackコントローラー
+ * @namespace app.controllers.webhook.postback
  */
 
-// import * as COA from '@motionpicture/coa-service';
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
@@ -10,19 +10,23 @@ import * as mongoose from 'mongoose';
 import * as request from 'request-promise-native';
 import * as util from 'util';
 
+import * as LINE from '../line';
+
 const debug = createDebug('sskts-line-assistant:controller:webhook:postback');
 const MESSAGE_TRANSACTION_NOT_FOUND = '該当取引はありません';
 
 /**
  * 予約番号で取引を検索する
- *
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.postback
  * @param {string} userId LINEユーザーID
  * @param {string} reserveNum 予約番号
  * @param {string} theaterCode 劇場コード
  */
 export async function searchTransactionByReserveNum(userId: string, reserveNum: string, theaterCode: string) {
     debug(userId, reserveNum);
-    await pushMessage(userId, '予約番号で検索しています...');
+    await LINE.pushMessage(userId, '予約番号で検索しています...');
 
     // 取引検索
     const transactionAdapter = new sskts.repository.Transaction(mongoose.connection);
@@ -36,7 +40,7 @@ export async function searchTransactionByReserveNum(userId: string, reserveNum: 
     ).exec();
 
     if (doc === null) {
-        await pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
+        await LINE.pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
 
         return;
     }
@@ -46,15 +50,17 @@ export async function searchTransactionByReserveNum(userId: string, reserveNum: 
 
 /**
  * 電話番号で取引を検索する
- *
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.postback
  * @param {string} userId LINEユーザーID
  * @param {string} tel 電話番号
  * @param {string} theaterCode 劇場コード
  */
 export async function searchTransactionByTel(userId: string, tel: string, __: string) {
     debug('tel:', tel);
-    await pushMessage(userId, 'implementing...');
-    // await pushMessage(userId, '電話番号で検索しています...');
+    await LINE.pushMessage(userId, 'implementing...');
+    // await LINE.pushMessage(userId, '電話番号で検索しています...');
 
     // 取引検索
     // const transactionAdapter = sskts.repository.transaction(mongoose.connection);
@@ -69,7 +75,7 @@ export async function searchTransactionByTel(userId: string, tel: string, __: st
     // ).exec();
 
     // if (transactionDoc === null) {
-    //     await pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
+    //     await LINE.pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
 
     //     return;
     // }
@@ -79,42 +85,42 @@ export async function searchTransactionByTel(userId: string, tel: string, __: st
 
 /**
  * 取引IDから取引情報詳細を送信する
- *
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.postback
  * @param {string} userId LINEユーザーID
  * @param {string} transactionId 取引ID
  */
 // tslint:disable-next-line:cyclomatic-complexity max-func-body-length
 async function pushTransactionDetails(userId: string, orderNumber: string) {
-    await pushMessage(userId, `${orderNumber}の取引詳細をまとめています...`);
+    await LINE.pushMessage(userId, `${orderNumber}の取引詳細をまとめています...`);
 
-    const orderAdapter = new sskts.repository.Order(mongoose.connection);
+    const orderRepo = new sskts.repository.Order(mongoose.connection);
     const taskAdapter = new sskts.repository.Task(mongoose.connection);
     const transactionAdapter = new sskts.repository.Transaction(mongoose.connection);
 
     // 注文検索
-    const orderDoc = await orderAdapter.orderModel.findOne({
+    const order = await orderRepo.orderModel.findOne({
         orderNumber: orderNumber
-    }).exec();
-    if (orderDoc === null) {
-        await pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
-
-        return;
-    }
-
-    const order = <sskts.factory.order.IOrder>orderDoc.toObject();
+    }).exec().then((doc) => {
+        return (doc === null) ? null : <sskts.factory.order.IOrder>doc.toObject();
+    });
     debug('order:', order);
 
     // 取引検索
-    const placeOrderTransaction = <sskts.factory.transaction.placeOrder.ITransaction>await transactionAdapter.transactionModel.findOne({
+    const transaction = <sskts.factory.transaction.placeOrder.ITransaction>await transactionAdapter.transactionModel.findOne({
         'result.order.orderNumber': orderNumber,
         typeOf: sskts.factory.transactionType.PlaceOrder
     }).then((doc: mongoose.Document) => doc.toObject());
-    const report = sskts.service.transaction.placeOrder.transaction2report(placeOrderTransaction);
+    const report = sskts.service.transaction.placeOrder.transaction2report(transaction);
     debug('report:', report);
+
+    // 確定取引なので、結果はundefinedではない
+    const transactionResult = <sskts.factory.transaction.placeOrder.IResult>transaction.result;
 
     // 非同期タスク検索
     const tasks = <sskts.factory.task.ITask[]>await taskAdapter.taskModel.find({
-        'data.transactionId': placeOrderTransaction.id
+        'data.transactionId': transaction.id
     }).exec().then((docs) => docs.map((doc) => doc.toObject()));
 
     // タスクの実行日時を調べる
@@ -157,7 +163,7 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
 注文取引概要
 --------------------
 取引ステータス: ${report.status}
-注文ステータス: ${order.orderStatus}
+注文ステータス: ${(order !== null) ? order.orderStatus : ''}
 予約番号: ${report.confirmationNumber}
 劇場: ${report.superEventLocation}
 --------------------
@@ -195,11 +201,11 @@ ${report.discountCodes}
 --------------------
 QR
 --------------------
-${order.acceptedOffers.map((offer) => `●${offer.itemOffered.reservedTicket.ticketedSeat.seatNumber} ${offer.itemOffered.reservedTicket.ticketToken}`).join('\n')}
+${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.reservedTicket.ticketedSeat.seatNumber} ${offer.itemOffered.reservedTicket.ticketToken}`).join('\n')}
 `
         ;
 
-    await pushMessage(userId, transactionDetails);
+    await LINE.pushMessage(userId, transactionDetails);
 
     // キュー実行のボタン表示
     await request.post({
@@ -220,17 +226,17 @@ ${order.acceptedOffers.map((offer) => `●${offer.itemOffered.reservedTicket.tic
                             {
                                 type: 'postback',
                                 label: 'メール送信',
-                                data: `action=pushNotification&transaction=${placeOrderTransaction.id}`
+                                data: `action=pushNotification&transaction=${transaction.id}`
                             },
                             {
                                 type: 'postback',
                                 label: '本予約',
-                                data: `action=settleSeatReservation&transaction=${placeOrderTransaction.id}`
+                                data: `action=settleSeatReservation&transaction=${transaction.id}`
                             },
                             {
                                 type: 'postback',
                                 label: '所有権作成',
-                                data: `action=createOwnershipInfos&transaction=${placeOrderTransaction.id}`
+                                data: `action=createOwnershipInfos&transaction=${transaction.id}`
                             }
                         ]
                     }
@@ -240,8 +246,16 @@ ${order.acceptedOffers.map((offer) => `●${offer.itemOffered.reservedTicket.tic
     }).promise();
 }
 
+/**
+ * 取引を通知する
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.postback
+ * @param userId LINEユーザーID
+ * @param transactionId 取引ID
+ */
 export async function pushNotification(userId: string, transactionId: string) {
-    await pushMessage(userId, '送信中...');
+    await LINE.pushMessage(userId, '送信中...');
 
     const taskAdapter = new sskts.repository.Task(mongoose.connection);
 
@@ -252,7 +266,7 @@ export async function pushNotification(userId: string, transactionId: string) {
     }).exec();
 
     if (tasks.length === 0) {
-        await pushMessage(userId, 'Task not found.');
+        await LINE.pushMessage(userId, 'Task not found.');
 
         return;
     }
@@ -265,16 +279,24 @@ export async function pushNotification(userId: string, transactionId: string) {
     try {
         await Promise.all(promises);
     } catch (error) {
-        await pushMessage(userId, `送信失敗:${error.message}`);
+        await LINE.pushMessage(userId, `送信失敗:${error.message}`);
 
         return;
     }
 
-    await pushMessage(userId, '送信完了');
+    await LINE.pushMessage(userId, '送信完了');
 }
 
+/**
+ * 座席の本予約を実行する
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.postback
+ * @param userId LINEユーザーID
+ * @param transactionId 取引ID
+ */
 export async function settleSeatReservation(userId: string, transactionId: string) {
-    await pushMessage(userId, '本予約中...');
+    await LINE.pushMessage(userId, '本予約中...');
 
     const taskAdapter = new sskts.repository.Task(mongoose.connection);
 
@@ -285,7 +307,7 @@ export async function settleSeatReservation(userId: string, transactionId: strin
     }).exec();
 
     if (tasks.length === 0) {
-        await pushMessage(userId, 'Task not found.');
+        await LINE.pushMessage(userId, 'Task not found.');
 
         return;
     }
@@ -295,16 +317,24 @@ export async function settleSeatReservation(userId: string, transactionId: strin
             await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, mongoose.connection);
         }));
     } catch (error) {
-        await pushMessage(userId, `本予約失敗:${error.message}`);
+        await LINE.pushMessage(userId, `本予約失敗:${error.message}`);
 
         return;
     }
 
-    await pushMessage(userId, '本予約完了');
+    await LINE.pushMessage(userId, '本予約完了');
 }
 
+/**
+ * 所有権作成を実行する
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.postback
+ * @param userId LINEユーザーID
+ * @param transactionId 取引ID
+ */
 export async function createOwnershipInfos(userId: string, transactionId: string) {
-    await pushMessage(userId, '所有権作成中...');
+    await LINE.pushMessage(userId, '所有権作成中...');
 
     const taskAdapter = new sskts.repository.Task(mongoose.connection);
 
@@ -315,7 +345,7 @@ export async function createOwnershipInfos(userId: string, transactionId: string
     }).exec();
 
     if (tasks.length === 0) {
-        await pushMessage(userId, 'Task not found.');
+        await LINE.pushMessage(userId, 'Task not found.');
 
         return;
     }
@@ -325,31 +355,10 @@ export async function createOwnershipInfos(userId: string, transactionId: string
             await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, mongoose.connection);
         }));
     } catch (error) {
-        await pushMessage(userId, `所有権作成失敗:${error.message}`);
+        await LINE.pushMessage(userId, `所有権作成失敗:${error.message}`);
 
         return;
     }
 
-    await pushMessage(userId, '所有権作成完了');
-}
-
-/**
- * メッセージ送信
- *
- * @param {string} userId
- * @param {string} text
- */
-async function pushMessage(userId: string, text: string) {
-    await request.post({
-        simple: false,
-        url: 'https://api.line.me/v2/bot/message/push',
-        auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-        json: true,
-        body: {
-            to: userId,
-            messages: [
-                { type: 'text', text: text }
-            ]
-        }
-    }).promise();
+    await LINE.pushMessage(userId, '所有権作成完了');
 }
