@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
-const mongoose = require("mongoose");
 const request = require("request-promise-native");
 const util = require("util");
 const LINE = require("../line");
@@ -35,7 +34,7 @@ function searchTransactionByReserveNum(userId, reserveNum, theaterCode) {
         debug(userId, reserveNum);
         yield LINE.pushMessage(userId, '予約番号で検索しています...');
         // 取引検索
-        const transactionAdapter = new sskts.repository.Transaction(mongoose.connection);
+        const transactionAdapter = new sskts.repository.Transaction(sskts.mongoose.connection);
         const doc = yield transactionAdapter.transactionModel.findOne({
             // tslint:disable-next-line:no-magic-numbers
             'result.order.orderInquiryKey.confirmationNumber': parseInt(reserveNum, 10),
@@ -94,9 +93,9 @@ exports.searchTransactionByTel = searchTransactionByTel;
 function pushTransactionDetails(userId, orderNumber) {
     return __awaiter(this, void 0, void 0, function* () {
         yield LINE.pushMessage(userId, `${orderNumber}の取引詳細をまとめています...`);
-        const orderRepo = new sskts.repository.Order(mongoose.connection);
-        const taskAdapter = new sskts.repository.Task(mongoose.connection);
-        const transactionAdapter = new sskts.repository.Transaction(mongoose.connection);
+        const orderRepo = new sskts.repository.Order(sskts.mongoose.connection);
+        const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
+        const transactionAdapter = new sskts.repository.Transaction(sskts.mongoose.connection);
         // 注文検索
         const order = yield orderRepo.orderModel.findOne({
             orderNumber: orderNumber
@@ -242,7 +241,7 @@ ${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.
 function pushNotification(userId, transactionId) {
     return __awaiter(this, void 0, void 0, function* () {
         yield LINE.pushMessage(userId, '送信中...');
-        const taskAdapter = new sskts.repository.Task(mongoose.connection);
+        const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
         // タスク検索
         const tasks = yield taskAdapter.taskModel.find({
             name: sskts.factory.taskName.SendEmailNotification,
@@ -254,7 +253,7 @@ function pushNotification(userId, transactionId) {
         }
         let promises = [];
         promises = promises.concat(tasks.map((task) => __awaiter(this, void 0, void 0, function* () {
-            yield sskts.service.task.execute(task.toObject())(taskAdapter, mongoose.connection);
+            yield sskts.service.task.execute(task.toObject())(taskAdapter, sskts.mongoose.connection);
         })));
         try {
             yield Promise.all(promises);
@@ -278,7 +277,7 @@ exports.pushNotification = pushNotification;
 function settleSeatReservation(userId, transactionId) {
     return __awaiter(this, void 0, void 0, function* () {
         yield LINE.pushMessage(userId, '本予約中...');
-        const taskAdapter = new sskts.repository.Task(mongoose.connection);
+        const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
         // タスク検索
         const tasks = yield taskAdapter.taskModel.find({
             name: sskts.factory.taskName.SettleSeatReservation,
@@ -290,7 +289,7 @@ function settleSeatReservation(userId, transactionId) {
         }
         try {
             yield Promise.all(tasks.map((task) => __awaiter(this, void 0, void 0, function* () {
-                yield sskts.service.task.execute(task.toObject())(taskAdapter, mongoose.connection);
+                yield sskts.service.task.execute(task.toObject())(taskAdapter, sskts.mongoose.connection);
             })));
         }
         catch (error) {
@@ -312,7 +311,7 @@ exports.settleSeatReservation = settleSeatReservation;
 function createOwnershipInfos(userId, transactionId) {
     return __awaiter(this, void 0, void 0, function* () {
         yield LINE.pushMessage(userId, '所有権作成中...');
-        const taskAdapter = new sskts.repository.Task(mongoose.connection);
+        const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
         // タスク検索
         const tasks = yield taskAdapter.taskModel.find({
             name: sskts.factory.taskName.CreateOwnershipInfos,
@@ -324,7 +323,7 @@ function createOwnershipInfos(userId, transactionId) {
         }
         try {
             yield Promise.all(tasks.map((task) => __awaiter(this, void 0, void 0, function* () {
-                yield sskts.service.task.execute(task.toObject())(taskAdapter, mongoose.connection);
+                yield sskts.service.task.execute(task.toObject())(taskAdapter, sskts.mongoose.connection);
             })));
         }
         catch (error) {

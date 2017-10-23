@@ -1,8 +1,11 @@
 "use strict";
-// tslint:disable:missing-jsdoc no-backbone-get-set-outside-model
+/**
+ * Expressアプリケーション
+ * @ignore
+ */
+const sskts = require("@motionpicture/sskts-domain");
 const bodyParser = require("body-parser");
 const express = require("express");
-const mongoose = require("mongoose");
 const errorHandler_1 = require("./middlewares/errorHandler");
 const notFoundHandler_1 = require("./middlewares/notFoundHandler");
 const app = express();
@@ -16,8 +19,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // 静的ファイル
 // app.use(express.static(__dirname + '/../public'));
 // mongoose
-mongoose.Promise = global.Promise;
-mongoose.connect(process.env.MONGOLAB_URI);
+sskts.mongoose.connect(process.env.MONGOLAB_URI);
 // routers
 const router_1 = require("./routers/router");
 const webhook_1 = require("./routers/webhook");

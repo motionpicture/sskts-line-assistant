@@ -6,7 +6,6 @@
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
-import * as mongoose from 'mongoose';
 import * as request from 'request-promise-native';
 import * as util from 'util';
 
@@ -29,7 +28,7 @@ export async function searchTransactionByReserveNum(userId: string, reserveNum: 
     await LINE.pushMessage(userId, '予約番号で検索しています...');
 
     // 取引検索
-    const transactionAdapter = new sskts.repository.Transaction(mongoose.connection);
+    const transactionAdapter = new sskts.repository.Transaction(sskts.mongoose.connection);
     const doc = await transactionAdapter.transactionModel.findOne(
         {
             // tslint:disable-next-line:no-magic-numbers
@@ -95,9 +94,9 @@ export async function searchTransactionByTel(userId: string, tel: string, __: st
 async function pushTransactionDetails(userId: string, orderNumber: string) {
     await LINE.pushMessage(userId, `${orderNumber}の取引詳細をまとめています...`);
 
-    const orderRepo = new sskts.repository.Order(mongoose.connection);
-    const taskAdapter = new sskts.repository.Task(mongoose.connection);
-    const transactionAdapter = new sskts.repository.Transaction(mongoose.connection);
+    const orderRepo = new sskts.repository.Order(sskts.mongoose.connection);
+    const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
+    const transactionAdapter = new sskts.repository.Transaction(sskts.mongoose.connection);
 
     // 注文検索
     const order = await orderRepo.orderModel.findOne({
@@ -111,7 +110,7 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     const transaction = <sskts.factory.transaction.placeOrder.ITransaction>await transactionAdapter.transactionModel.findOne({
         'result.order.orderNumber': orderNumber,
         typeOf: sskts.factory.transactionType.PlaceOrder
-    }).then((doc: mongoose.Document) => doc.toObject());
+    }).then((doc: sskts.mongoose.Document) => doc.toObject());
     const report = sskts.service.transaction.placeOrder.transaction2report(transaction);
     debug('report:', report);
 
@@ -257,7 +256,7 @@ ${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.
 export async function pushNotification(userId: string, transactionId: string) {
     await LINE.pushMessage(userId, '送信中...');
 
-    const taskAdapter = new sskts.repository.Task(mongoose.connection);
+    const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
 
     // タスク検索
     const tasks = await taskAdapter.taskModel.find({
@@ -273,7 +272,7 @@ export async function pushNotification(userId: string, transactionId: string) {
 
     let promises: Promise<void>[] = [];
     promises = promises.concat(tasks.map(async (task) => {
-        await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, mongoose.connection);
+        await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, sskts.mongoose.connection);
     }));
 
     try {
@@ -298,7 +297,7 @@ export async function pushNotification(userId: string, transactionId: string) {
 export async function settleSeatReservation(userId: string, transactionId: string) {
     await LINE.pushMessage(userId, '本予約中...');
 
-    const taskAdapter = new sskts.repository.Task(mongoose.connection);
+    const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
 
     // タスク検索
     const tasks = await taskAdapter.taskModel.find({
@@ -314,7 +313,7 @@ export async function settleSeatReservation(userId: string, transactionId: strin
 
     try {
         await Promise.all(tasks.map(async (task) => {
-            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, mongoose.connection);
+            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, sskts.mongoose.connection);
         }));
     } catch (error) {
         await LINE.pushMessage(userId, `本予約失敗:${error.message}`);
@@ -336,7 +335,7 @@ export async function settleSeatReservation(userId: string, transactionId: strin
 export async function createOwnershipInfos(userId: string, transactionId: string) {
     await LINE.pushMessage(userId, '所有権作成中...');
 
-    const taskAdapter = new sskts.repository.Task(mongoose.connection);
+    const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
 
     // タスク検索
     const tasks = await taskAdapter.taskModel.find({
@@ -352,7 +351,7 @@ export async function createOwnershipInfos(userId: string, transactionId: string
 
     try {
         await Promise.all(tasks.map(async (task) => {
-            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, mongoose.connection);
+            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, sskts.mongoose.connection);
         }));
     } catch (error) {
         await LINE.pushMessage(userId, `所有権作成失敗:${error.message}`);
