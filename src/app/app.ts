@@ -1,7 +1,11 @@
-// tslint:disable:missing-jsdoc no-backbone-get-set-outside-model
+/**
+ * Expressアプリケーション
+ * @ignore
+ */
+
+import * as sskts from '@motionpicture/sskts-domain';
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
-import * as mongoose from 'mongoose';
 
 import errorHandler from './middlewares/errorHandler';
 import notFoundHandler from './middlewares/notFoundHandler';
@@ -21,8 +25,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // app.use(express.static(__dirname + '/../public'));
 
 // mongoose
-(<any>mongoose).Promise = global.Promise;
-mongoose.connect(process.env.MONGOLAB_URI);
+sskts.mongoose.connect(process.env.MONGOLAB_URI);
 
 // routers
 import router from './routers/router';
