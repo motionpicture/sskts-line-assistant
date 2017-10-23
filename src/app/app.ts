@@ -25,7 +25,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // app.use(express.static(__dirname + '/../public'));
 
 // mongoose
-sskts.mongoose.connect(process.env.MONGOLAB_URI);
+sskts.mongoose.connect(<string>process.env.MONGOLAB_URI);
 
 // routers
 import router from './routers/router';
