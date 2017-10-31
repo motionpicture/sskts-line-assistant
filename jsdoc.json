@@ -2,7 +2,7 @@
     "opts": {
         "template": "node_modules/ink-docstrap/template",
         "encoding": "utf8",
-        "destination": "./docs/",
+        "destination": "./doc/",
         "recurse": true
     },
     "tags": {
@@ -14,8 +14,7 @@
     "source": {
         "include": [
             "README.md",
-            "app",
-            "bin"
+            "dst"
         ],
         "exclude": []
     },
