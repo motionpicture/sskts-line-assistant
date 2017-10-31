@@ -7,7 +7,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
-- domain v23(スキーマ一新)に対応。
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+
+## v2.0.0 - 2017-10-31
+### Changed
+- sskts-domain@v23(スキーマ一新)に対応。
 
 ## v1.3.0 - 2017-07-04
 ### Added
