@@ -7,7 +7,7 @@ import * as createDebug from 'debug';
 import * as express from 'express';
 import { OK } from 'http-status';
 
-import * as WebhookController from '../conrtollers/webhook';
+import * as WebhookController from '../controllers/webhook';
 
 const webhookRouter = express.Router();
 const debug = createDebug('sskts-line-assistant:router:webhook');

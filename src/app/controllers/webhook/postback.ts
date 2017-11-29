@@ -29,22 +29,21 @@ export async function searchTransactionByReserveNum(userId: string, reserveNum: 
 
     // 取引検索
     const transactionAdapter = new sskts.repository.Transaction(sskts.mongoose.connection);
-    const doc = await transactionAdapter.transactionModel.findOne(
+    await transactionAdapter.transactionModel.findOne(
         {
             // tslint:disable-next-line:no-magic-numbers
             'result.order.orderInquiryKey.confirmationNumber': parseInt(reserveNum, 10),
             'result.order.orderInquiryKey.theaterCode': theaterCode
         },
         'result'
-    ).exec();
-
-    if (doc === null) {
-        await LINE.pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
-
-        return;
-    }
-
-    await pushTransactionDetails(userId, doc.get('result.order.orderNumber'));
+    ).exec().then(async (doc) => {
+        if (doc === null) {
+            await LINE.pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
+        } else {
+            const transaction = <sskts.factory.transaction.placeOrder.ITransaction>doc.toObject();
+            await pushTransactionDetails(userId, (<sskts.factory.transaction.placeOrder.IResult>transaction.result).order.orderNumber);
+        }
+    });
 }
 
 /**
@@ -59,27 +58,6 @@ export async function searchTransactionByReserveNum(userId: string, reserveNum: 
 export async function searchTransactionByTel(userId: string, tel: string, __: string) {
     debug('tel:', tel);
     await LINE.pushMessage(userId, 'implementing...');
-    // await LINE.pushMessage(userId, '電話番号で検索しています...');
-
-    // 取引検索
-    // const transactionAdapter = sskts.repository.transaction(mongoose.connection);
-    // const transactionDoc = await transactionAdapter.transactionModel.findOne(
-    //     {
-    //         status: sskts.factory.transactionStatus.CLOSED,
-    //         'inquiry_key.tel': tel,
-    //         'inquiry_key.theater_code': theaterCode
-    //     }
-    //     ,
-    //     '_id'
-    // ).exec();
-
-    // if (transactionDoc === null) {
-    //     await LINE.pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
-
-    //     return;
-    // }
-
-    // await pushTransactionDetails(userId, transactionDoc.get('_id').toString());
 }
 
 /**
