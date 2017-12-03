@@ -54,7 +54,7 @@
     "build": "tsc",
     "check": "npm run tslint && nsp check",
     "clean": "rimraf ./dst ./doc ./coverage \"npm-debug.log*\" ./.nyc_output",
-    "jsdoc": "jsdoc -c jsdoc.json",
+    "doc": "jsdoc -c jsdoc.json",
     "mocha": "mocha",
     "snyk": "snyk wizard",
     "start": "node dst/server.js",
