@@ -10,11 +10,13 @@ import * as express from 'express';
 import errorHandler from './middlewares/errorHandler';
 import notFoundHandler from './middlewares/notFoundHandler';
 
+import mongooseConnectionOptions from '../mongooseConnectionOptions';
+
 const app = express();
 
 // view engine setup
-app.set('views', `${__dirname}/views`);
-app.set('view engine', 'ejs');
+// app.set('views', `${__dirname}/views`);
+// app.set('view engine', 'ejs');
 
 app.use(bodyParser.json());
 // The extended option allows to choose between parsing the URL-encoded data
@@ -24,12 +26,12 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // 静的ファイル
 // app.use(express.static(__dirname + '/../public'));
 
-// mongoose
-sskts.mongoose.connect(<string>process.env.MONGOLAB_URI);
+// MongoDB接続
+sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
 
 // routers
-import router from './routers/router';
-import webhookRouter from './routers/webhook';
+import router from './routes/router';
+import webhookRouter from './routes/webhook';
 app.use('/', router);
 app.use('/webhook', webhookRouter);
 

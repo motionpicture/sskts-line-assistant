@@ -24,7 +24,7 @@
         "dateFormat": "ddd MMM Do YYYY",
         "outputSourceFiles": true,
         "outputSourcePath": true,
-        "systemName": "佐々木興行チケットシステムAPIウェブアプリケーション",
+        "systemName": "SSKTS LINE Assistant",
         "footer": "",
         "navType": "vertical",
         "theme": "cosmo",

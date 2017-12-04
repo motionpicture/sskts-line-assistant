@@ -11,12 +11,4 @@ const router = express.Router();
 //   debug('Time: ', Date.now())
 //   next()
 // })
-router.get('/environmentVariables', (__, res) => {
-    res.json({
-        data: {
-            type: 'envs',
-            attributes: process.env
-        }
-    });
-});
 exports.default = router;

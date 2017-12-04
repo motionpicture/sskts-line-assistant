@@ -60,23 +60,23 @@ export async function postback(event: any) {
     try {
         switch (data.action) {
             case 'searchTransactionByReserveNum':
-                await PostbackController.searchTransactionByReserveNum(userId, data.reserveNum, data.theater);
+                await PostbackController.searchTransactionByReserveNum(userId, <string>data.reserveNum, <string>data.theater);
                 break;
 
             case 'searchTransactionByTel':
-                await PostbackController.searchTransactionByTel(userId, data.tel, data.theater);
+                await PostbackController.searchTransactionByTel(userId, <string>data.tel, <string>data.theater);
                 break;
 
             case 'pushNotification':
-                await PostbackController.pushNotification(userId, data.transaction);
+                await PostbackController.pushNotification(userId, <string>data.transaction);
                 break;
 
             case 'settleSeatReservation':
-                await PostbackController.settleSeatReservation(userId, data.transaction);
+                await PostbackController.settleSeatReservation(userId, <string>data.transaction);
                 break;
 
             case 'createOwnershipInfos':
-                await PostbackController.createOwnershipInfos(userId, data.transaction);
+                await PostbackController.createOwnershipInfos(userId, <string>data.transaction);
                 break;
 
             default:

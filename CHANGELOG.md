@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
+- install [@motionpicture/sskts-domain@23.4.0](https://www.npmjs.com/package/@motionpicture/sskts-domain)
 
 ### Deprecated
 

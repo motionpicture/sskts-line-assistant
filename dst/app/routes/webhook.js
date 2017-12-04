@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const createDebug = require("debug");
 const express = require("express");
 const http_status_1 = require("http-status");
-const WebhookController = require("../conrtollers/webhook");
+const WebhookController = require("../controllers/webhook");
 const webhookRouter = express.Router();
 const debug = createDebug('sskts-line-assistant:router:webhook');
 webhookRouter.all('/', (req, res) => __awaiter(this, void 0, void 0, function* () {

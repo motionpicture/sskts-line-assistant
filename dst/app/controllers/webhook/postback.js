@@ -35,16 +35,19 @@ function searchTransactionByReserveNum(userId, reserveNum, theaterCode) {
         yield LINE.pushMessage(userId, '予約番号で検索しています...');
         // 取引検索
         const transactionAdapter = new sskts.repository.Transaction(sskts.mongoose.connection);
-        const doc = yield transactionAdapter.transactionModel.findOne({
+        yield transactionAdapter.transactionModel.findOne({
             // tslint:disable-next-line:no-magic-numbers
             'result.order.orderInquiryKey.confirmationNumber': parseInt(reserveNum, 10),
             'result.order.orderInquiryKey.theaterCode': theaterCode
-        }, 'result').exec();
-        if (doc === null) {
-            yield LINE.pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
-            return;
-        }
-        yield pushTransactionDetails(userId, doc.get('result.order.orderNumber'));
+        }, 'result').exec().then((doc) => __awaiter(this, void 0, void 0, function* () {
+            if (doc === null) {
+                yield LINE.pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
+            }
+            else {
+                const transaction = doc.toObject();
+                yield pushTransactionDetails(userId, transaction.result.order.orderNumber);
+            }
+        }));
     });
 }
 exports.searchTransactionByReserveNum = searchTransactionByReserveNum;
@@ -61,23 +64,6 @@ function searchTransactionByTel(userId, tel, __) {
     return __awaiter(this, void 0, void 0, function* () {
         debug('tel:', tel);
         yield LINE.pushMessage(userId, 'implementing...');
-        // await LINE.pushMessage(userId, '電話番号で検索しています...');
-        // 取引検索
-        // const transactionAdapter = sskts.repository.transaction(mongoose.connection);
-        // const transactionDoc = await transactionAdapter.transactionModel.findOne(
-        //     {
-        //         status: sskts.factory.transactionStatus.CLOSED,
-        //         'inquiry_key.tel': tel,
-        //         'inquiry_key.theater_code': theaterCode
-        //     }
-        //     ,
-        //     '_id'
-        // ).exec();
-        // if (transactionDoc === null) {
-        //     await LINE.pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
-        //     return;
-        // }
-        // await pushTransactionDetails(userId, transactionDoc.get('_id').toString());
     });
 }
 exports.searchTransactionByTel = searchTransactionByTel;

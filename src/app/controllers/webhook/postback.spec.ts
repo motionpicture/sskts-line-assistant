@@ -1,6 +1,7 @@
+// tslint:disable:no-implicit-dependencies
+
 /**
  * postback test
- *
  * @ignore
  */
 
