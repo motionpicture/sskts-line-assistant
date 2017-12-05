@@ -1,70 +1,59 @@
+"use strict";
 /**
  * Module dependencies.
  */
-
+Object.defineProperty(exports, "__esModule", { value: true });
 const startTime = process.hrtime();
-
-import * as createDebug from 'debug';
-import * as http from 'http';
-import * as app from './app/app';
-
+const createDebug = require("debug");
+const fs = require("fs");
+const https = require("https");
+const app = require("./app/app");
 const debug = createDebug('sskts-line-assistant:server');
-
 /**
  * Get port from environment and store in Express.
  */
-
-const port = normalizePort((process.env.PORT === undefined) ? '8080' : process.env.PORT);
+const port = normalizePort((process.env.PORT === undefined) ? '443' : process.env.PORT);
 app.set('port', port);
-
 /**
  * Create HTTP server.
  */
-
-const server = http.createServer(app);
-
+const options = {
+    key: fs.readFileSync(`${__dirname}/../certificate/server.key`),
+    cert: fs.readFileSync(`${__dirname}/../certificate/server.crt`)
+};
+const server = https.createServer(options, app);
 /**
  * Listen on provided port, on all network interfaces.
  */
-
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
-
 /**
  * Normalize a port into a number, string, or false.
  */
-
-function normalizePort(val: any) {
+function normalizePort(val) {
     // tslint:disable-next-line:no-magic-numbers
     const portNumber = parseInt(val, 10);
-
     if (isNaN(portNumber)) {
         // named pipe
         return val;
     }
-
     if (portNumber >= 0) {
         // port number
         return portNumber;
     }
-
     return false;
 }
-
 /**
  * Event listener for HTTP server 'error' event.
  */
-
-function onError(error: any) {
+function onError(error) {
     if (error.syscall !== 'listen') {
         throw error;
     }
-
     const bind = typeof port === 'string'
         ? `Pipe ${port}`
-        : `Port ${(<number>port).toString()}`;
-
+        : `Port ${port.toString()}`;
     // handle specific listen errors with friendly messages
     switch (error.code) {
         case 'EACCES':
@@ -79,18 +68,15 @@ function onError(error: any) {
             throw error;
     }
 }
-
 /**
  * Event listener for HTTP server 'listening' event.
  */
-
 function onListening() {
     const addr = server.address();
     const bind = typeof addr === 'string'
-        ? `pipe ${<string>addr}`
+        ? `pipe ${addr}`
         : `port ${addr.port.toString()}`;
     debug(`Listening on ${bind}`);
-
     const diff = process.hrtime(startTime);
     debug(`api server listening took ${diff[0]} seconds and ${diff[1]} nanoseconds.`);
 }

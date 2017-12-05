@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Cognitoユーザー認証追加。
 
 ### Changed
 - install [@motionpicture/sskts-domain@23.4.0](https://www.npmjs.com/package/@motionpicture/sskts-domain)
