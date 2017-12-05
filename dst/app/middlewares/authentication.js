@@ -48,7 +48,7 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
             const auth = new sasaki.auth.OAuth2({
                 domain: process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
                 clientId: process.env.SSKTS_API_CLIENT_ID,
-                clientSecret: process.env.SSKTS_API_CLIENT_SECRE,
+                clientSecret: process.env.SSKTS_API_CLIENT_SECRET,
                 // tslint:disable-next-line:no-http-string
                 redirectUri: `https://${req.host}/signIn`,
                 // tslint:disable-next-line:no-http-string

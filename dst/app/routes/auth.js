@@ -28,14 +28,13 @@ const scopes = [
     // process.env.TEST_RESOURCE_IDENTIFIER + '/people.creditCards',
     // process.env.TEST_RESOURCE_IDENTIFIER + '/people.ownershipInfos.read-only'
 ];
-const codeVerifier = '12345';
 const user = 'U28fba84b4008d60291fc861e2562b34f';
 authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     try {
         const auth = new sasaki.auth.OAuth2({
             domain: process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
             clientId: process.env.SSKTS_API_CLIENT_ID,
-            clientSecret: process.env.SSKTS_API_CLIENT_SECRE,
+            clientSecret: process.env.SSKTS_API_CLIENT_SECRET,
             // tslint:disable-next-line:no-http-string
             redirectUri: `https://${req.host}/signIn`,
             // tslint:disable-next-line:no-http-string
@@ -45,12 +44,12 @@ authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, fu
             const authUrl = auth.generateAuthUrl({
                 scopes: scopes,
                 state: user,
-                codeVerifier: codeVerifier
+                codeVerifier: process.env.SSKTS_API_CODE_VERIFIER
             });
             res.send(authUrl);
         }
         else {
-            const credentials = yield auth.getToken(req.query.code, codeVerifier);
+            const credentials = yield auth.getToken(req.query.code, process.env.SSKTS_API_CODE_VERIFIER);
             debug('credentials published', credentials);
             // 認証情報を取得できればログイン成功
             auth.setCredentials(credentials);
