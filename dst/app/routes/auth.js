@@ -12,60 +12,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const sasaki = require("@motionpicture/sskts-api-nodejs-client");
-const createDebug = require("debug");
 const express = require("express");
-const redis_1 = require("../../redis");
 const LINE = require("../controllers/line");
+const user_1 = require("../user");
 const authRouter = express.Router();
-const debug = createDebug('sskts-line-assistant:router:auth');
-const scopes = [
-    'phone', 'openid', 'email', 'aws.cognito.signin.user.admin', 'profile'
-    // process.env.TEST_RESOURCE_IDENTIFIER + '/transactions',
-    // process.env.TEST_RESOURCE_IDENTIFIER + '/events.read-only',
-    // process.env.TEST_RESOURCE_IDENTIFIER + '/organizations.read-only',
-    // process.env.TEST_RESOURCE_IDENTIFIER + '/people.contacts',
-    // process.env.TEST_RESOURCE_IDENTIFIER + '/people.creditCards',
-    // process.env.TEST_RESOURCE_IDENTIFIER + '/people.ownershipInfos.read-only'
-];
-const user = 'U28fba84b4008d60291fc861e2562b34f';
+/**
+ * サインイン
+ * Cognitoからリダイレクトしてくる
+ */
 authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     try {
-        const auth = new sasaki.auth.OAuth2({
-            domain: process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
-            clientId: process.env.SSKTS_API_CLIENT_ID,
-            clientSecret: process.env.SSKTS_API_CLIENT_SECRET,
-            // tslint:disable-next-line:no-http-string
-            redirectUri: `https://${req.host}/signIn`,
-            // tslint:disable-next-line:no-http-string
-            logoutUri: `https://${req.host}/signOut`
+        const userId = req.query.state;
+        const user = new user_1.default({
+            host: req.hostname,
+            userId: userId
         });
-        if (req.query.code === undefined) {
-            const authUrl = auth.generateAuthUrl({
-                scopes: scopes,
-                state: user,
-                codeVerifier: process.env.SSKTS_API_CODE_VERIFIER
-            });
-            res.send(authUrl);
-        }
-        else {
-            const credentials = yield auth.getToken(req.query.code, process.env.SSKTS_API_CODE_VERIFIER);
-            debug('credentials published', credentials);
-            // 認証情報を取得できればログイン成功
-            auth.setCredentials(credentials);
-            // tslint:disable-next-line:no-suspicious-comment
-            // ログイン状態を保持
-            const results = yield redis_1.default.multi()
-                .set(`token.${user}`, credentials.access_token)
-                .expire(`token.${user}`, 60, debug)
-                .exec();
-            debug('results:', results);
-            yield LINE.pushMessage(user, `Signed in. ${credentials.access_token}`);
-            res.send(`<html>
-<body>Signed in. ${credentials.access_token}</body>
+        yield user.signIn(req.query.code);
+        yield LINE.pushMessage(userId, `Signed in. ${user.payload.username}`);
+        res.send(`<html>
+<body>Signed in. ${user.payload.username}</body>
 </html>
 `);
-        }
     }
     catch (error) {
         next(error);
