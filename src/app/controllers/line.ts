@@ -8,7 +8,7 @@ import * as request from 'request-promise-native';
 
 const debug = createDebug('sskts-line-assistant:controller:line');
 
-const URL_PUSH_MESSAGE = 'https://api.line.me/v2/bot/message/push';
+export const URL_PUSH_MESSAGE = 'https://api.line.me/v2/bot/message/push';
 
 /**
  * メッセージ送信

@@ -7,7 +7,7 @@ const startTime = process.hrtime();
 const createDebug = require("debug");
 const http = require("http");
 const app = require("./app/app");
-const debug = createDebug('app:server');
+const debug = createDebug('sskts-line-assistant:server');
 /**
  * Get port from environment and store in Express.
  */

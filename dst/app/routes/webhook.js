@@ -16,9 +16,10 @@ const createDebug = require("debug");
 const express = require("express");
 const http_status_1 = require("http-status");
 const WebhookController = require("../controllers/webhook");
+const authentication_1 = require("../middlewares/authentication");
 const webhookRouter = express.Router();
 const debug = createDebug('sskts-line-assistant:router:webhook');
-webhookRouter.all('/', (req, res) => __awaiter(this, void 0, void 0, function* () {
+webhookRouter.all('/', authentication_1.default, (req, res) => __awaiter(this, void 0, void 0, function* () {
     debug('body:', JSON.stringify(req.body));
     try {
         const event = (req.body.events !== undefined) ? req.body.events[0] : undefined;
