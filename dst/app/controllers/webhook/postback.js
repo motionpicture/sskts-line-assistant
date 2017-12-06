@@ -320,3 +320,29 @@ function createOwnershipInfos(userId, transactionId) {
     });
 }
 exports.createOwnershipInfos = createOwnershipInfos;
+/**
+ * 取引検索(csvダウンロード)
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.postback
+ * @param {string} userId
+ * @param {string} date YYYY-MM-DD形式
+ */
+function searchTransactionsByDate(userId, date) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield LINE.pushMessage(userId, `${date}の取引を検索しています...`);
+        const startFrom = moment(`${date}T00:00:00+09:00`);
+        const startThrough = moment(`${date}T00:00:00+09:00`).add(1, 'day');
+        const csv = yield sskts.service.transaction.placeOrder.download({
+            startFrom: startFrom.toDate(),
+            startThrough: startThrough.toDate()
+        }, 'csv')(new sskts.repository.Transaction(sskts.mongoose.connection));
+        yield LINE.pushMessage(userId, 'csvを作成しています...');
+        const sasUrl = yield sskts.service.util.uploadFile({
+            fileName: `sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`,
+            text: csv
+        })();
+        yield LINE.pushMessage(userId, `download -> ${sasUrl} `);
+    });
+}
+exports.searchTransactionsByDate = searchTransactionsByDate;

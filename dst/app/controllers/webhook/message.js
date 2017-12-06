@@ -101,7 +101,33 @@ exports.pushButtonsReserveNumOrTel = pushButtonsReserveNumOrTel;
  */
 function askFromWhenAndToWhen(userId) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield LINE.pushMessage(userId, '期間をYYYYMMDD-YYYYMMDD形式で教えてください。');
+        // await LINE.pushMessage(userId, '期間をYYYYMMDD-YYYYMMDD形式で教えてください。');
+        yield request.post('https://api.line.me/v2/bot/message/push', {
+            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+            json: true,
+            body: {
+                to: userId,
+                messages: [
+                    {
+                        type: 'template',
+                        altText: '日付選択',
+                        template: {
+                            type: 'buttons',
+                            text: '日付を選択するか、期間をYYYYMMDD-YYYYMMDD形式で教えてください。',
+                            actions: [
+                                {
+                                    type: 'datetimepicker',
+                                    label: '日付選択',
+                                    mode: 'date',
+                                    data: 'action=searchTransactionsByDate',
+                                    initial: moment().format('YYYY-MM-DD')
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        });
     });
 }
 exports.askFromWhenAndToWhen = askFromWhenAndToWhen;
@@ -114,9 +140,11 @@ exports.askFromWhenAndToWhen = askFromWhenAndToWhen;
 function publishURI4transactionsCSV(userId, dateFrom, dateThrough) {
     return __awaiter(this, void 0, void 0, function* () {
         yield LINE.pushMessage(userId, `${dateFrom}-${dateThrough}の取引を検索しています...`);
+        const startFrom = moment(`${dateFrom}T00:00:00+09:00`, 'YYYYMMDDThh:mm:ssZ');
+        const startThrough = moment(`${dateThrough}T00:00:00+09:00`, 'YYYYMMDDThh:mm:ssZ').add(1, 'day');
         const csv = yield sskts.service.transaction.placeOrder.download({
-            startFrom: moment(dateFrom, 'YYYYMMDD').toDate(),
-            startThrough: moment(dateThrough, 'YYYYMMDD').add(1, 'day').toDate()
+            startFrom: startFrom.toDate(),
+            startThrough: startThrough.toDate()
         }, 'csv')(new sskts.repository.Transaction(sskts.mongoose.connection));
         yield LINE.pushMessage(userId, 'csvを作成しています...');
         const sasUrl = yield sskts.service.util.uploadFile({

@@ -7,7 +7,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
-- install [@motionpicture/sskts-domain@23.4.0](https://www.npmjs.com/package/@motionpicture/sskts-domain)
 
 ### Deprecated
 
@@ -17,6 +16,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+
+## v2.1.0 - 2017-12-06
+### Added
+- Cognitoユーザー認証追加。
+
+### Changed
+- install [@motionpicture/sskts-domain@23.4.0](https://www.npmjs.com/package/@motionpicture/sskts-domain)
+- 取引csv検索条件を調整。
 
 ## v2.0.0 - 2017-10-31
 ### Changed

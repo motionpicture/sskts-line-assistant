@@ -5,7 +5,8 @@
 const startTime = process.hrtime();
 
 import * as createDebug from 'debug';
-import * as http from 'http';
+import * as fs from 'fs';
+import * as https from 'https';
 import * as app from './app/app';
 
 const debug = createDebug('sskts-line-assistant:server');
@@ -14,14 +15,18 @@ const debug = createDebug('sskts-line-assistant:server');
  * Get port from environment and store in Express.
  */
 
-const port = normalizePort((process.env.PORT === undefined) ? '8080' : process.env.PORT);
+const port = normalizePort((process.env.PORT === undefined) ? '443' : process.env.PORT);
 app.set('port', port);
 
 /**
  * Create HTTP server.
  */
 
-const server = http.createServer(app);
+const options = {
+    key: fs.readFileSync(`${__dirname}/../certificate/server.key`),
+    cert: fs.readFileSync(`${__dirname}/../certificate/server.crt`)
+};
+const server = https.createServer(options, app);
 
 /**
  * Listen on provided port, on all network interfaces.

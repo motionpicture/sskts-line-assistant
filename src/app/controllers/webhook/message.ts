@@ -92,7 +92,37 @@ export async function pushButtonsReserveNumOrTel(userId: string, message: string
  * @memberof app.controllers.webhook.message
  */
 export async function askFromWhenAndToWhen(userId: string) {
-    await LINE.pushMessage(userId, '期間をYYYYMMDD-YYYYMMDD形式で教えてください。');
+    // await LINE.pushMessage(userId, '期間をYYYYMMDD-YYYYMMDD形式で教えてください。');
+    await request.post(
+        'https://api.line.me/v2/bot/message/push',
+        {
+            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+            json: true,
+            body: {
+                to: userId, // 送信相手のuserId
+                messages: [
+                    {
+                        type: 'template',
+                        altText: '日付選択',
+                        template: {
+                            type: 'buttons',
+                            text: '日付を選択するか、期間をYYYYMMDD-YYYYMMDD形式で教えてください。',
+                            actions: [
+                                {
+                                    type: 'datetimepicker',
+                                    label: '日付選択',
+                                    mode: 'date',
+                                    data: 'action=searchTransactionsByDate',
+                                    initial: moment().format('YYYY-MM-DD')
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    );
+
 }
 
 /**
@@ -104,10 +134,13 @@ export async function askFromWhenAndToWhen(userId: string) {
 export async function publishURI4transactionsCSV(userId: string, dateFrom: string, dateThrough: string) {
     await LINE.pushMessage(userId, `${dateFrom}-${dateThrough}の取引を検索しています...`);
 
+    const startFrom = moment(`${dateFrom}T00:00:00+09:00`, 'YYYYMMDDThh:mm:ssZ');
+    const startThrough = moment(`${dateThrough}T00:00:00+09:00`, 'YYYYMMDDThh:mm:ssZ').add(1, 'day');
+
     const csv = await sskts.service.transaction.placeOrder.download(
         {
-            startFrom: moment(dateFrom, 'YYYYMMDD').toDate(),
-            startThrough: moment(dateThrough, 'YYYYMMDD').add(1, 'day').toDate()
+            startFrom: startFrom.toDate(),
+            startThrough: startThrough.toDate()
         },
         'csv'
     )(new sskts.repository.Transaction(sskts.mongoose.connection));

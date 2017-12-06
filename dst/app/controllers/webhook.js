@@ -79,6 +79,9 @@ function postback(event) {
                 case 'createOwnershipInfos':
                     yield PostbackController.createOwnershipInfos(userId, data.transaction);
                     break;
+                case 'searchTransactionsByDate':
+                    yield PostbackController.searchTransactionsByDate(userId, event.postback.params.date);
+                    break;
                 default:
                     break;
             }

@@ -339,3 +339,35 @@ export async function createOwnershipInfos(userId: string, transactionId: string
 
     await LINE.pushMessage(userId, '所有権作成完了');
 }
+
+/**
+ * 取引検索(csvダウンロード)
+ * @export
+ * @function
+ * @memberof app.controllers.webhook.postback
+ * @param {string} userId
+ * @param {string} date YYYY-MM-DD形式
+ */
+export async function searchTransactionsByDate(userId: string, date: string) {
+    await LINE.pushMessage(userId, `${date}の取引を検索しています...`);
+
+    const startFrom = moment(`${date}T00:00:00+09:00`);
+    const startThrough = moment(`${date}T00:00:00+09:00`).add(1, 'day');
+
+    const csv = await sskts.service.transaction.placeOrder.download(
+        {
+            startFrom: startFrom.toDate(),
+            startThrough: startThrough.toDate()
+        },
+        'csv'
+    )(new sskts.repository.Transaction(sskts.mongoose.connection));
+
+    await LINE.pushMessage(userId, 'csvを作成しています...');
+
+    const sasUrl = await sskts.service.util.uploadFile({
+        fileName: `sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`,
+        text: csv
+    })();
+
+    await LINE.pushMessage(userId, `download -> ${sasUrl} `);
+}
