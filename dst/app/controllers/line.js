@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const createDebug = require("debug");
 const request = require("request-promise-native");
 const debug = createDebug('sskts-line-assistant:controller:line');
-const URL_PUSH_MESSAGE = 'https://api.line.me/v2/bot/message/push';
+exports.URL_PUSH_MESSAGE = 'https://api.line.me/v2/bot/message/push';
 /**
  * メッセージ送信
  * @export
@@ -30,7 +30,7 @@ function pushMessage(userId, text) {
         // push message
         yield request.post({
             simple: false,
-            url: URL_PUSH_MESSAGE,
+            url: exports.URL_PUSH_MESSAGE,
             auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
             json: true,
             body: {

@@ -15,7 +15,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const sskts = require("@motionpicture/sskts-domain");
 const http_status_1 = require("http-status");
-// tslint:disable-next-line:no-require-imports no-var-requires
+const request = require("request-promise-native");
 const LINE = require("../controllers/line");
 const user_1 = require("../user");
 exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
@@ -35,7 +35,33 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
             return;
         }
         // ログインボタンを送信
-        yield LINE.pushMessage(userId, req.user.generateAuthUrl());
+        // await LINE.pushMessage(userId, req.user.generateAuthUrl());
+        yield request.post({
+            simple: false,
+            url: LINE.URL_PUSH_MESSAGE,
+            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+            json: true,
+            body: {
+                to: userId,
+                messages: [
+                    {
+                        type: 'template',
+                        altText: 'ログインボタン',
+                        template: {
+                            type: 'buttons',
+                            text: 'ログインしてください。',
+                            actions: [
+                                {
+                                    type: 'uri',
+                                    label: 'Sign In',
+                                    uri: req.user.generateAuthUrl()
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        });
         res.status(http_status_1.OK).send('ok');
     }
     catch (error) {

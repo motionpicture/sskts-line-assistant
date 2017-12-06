@@ -7,7 +7,7 @@
 import * as sskts from '@motionpicture/sskts-domain';
 import { NextFunction, Request, Response } from 'express';
 import { OK } from 'http-status';
-// tslint:disable-next-line:no-require-imports no-var-requires
+import * as request from 'request-promise-native';
 
 import * as LINE from '../controllers/line';
 import User from '../user';
@@ -33,7 +33,33 @@ export default async (req: Request, res: Response, next: NextFunction) => {
         }
 
         // ログインボタンを送信
-        await LINE.pushMessage(userId, req.user.generateAuthUrl());
+        // await LINE.pushMessage(userId, req.user.generateAuthUrl());
+        await request.post({
+            simple: false,
+            url: LINE.URL_PUSH_MESSAGE,
+            auth: { bearer: <string>process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+            json: true,
+            body: {
+                to: userId,
+                messages: [
+                    {
+                        type: 'template',
+                        altText: 'ログインボタン',
+                        template: {
+                            type: 'buttons',
+                            text: 'ログインしてください。',
+                            actions: [
+                                {
+                                    type: 'uri',
+                                    label: 'Sign In',
+                                    uri: req.user.generateAuthUrl()
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        });
 
         res.status(OK).send('ok');
     } catch (error) {

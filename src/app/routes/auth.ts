@@ -25,6 +25,7 @@ authRouter.get(
             });
 
             await user.signIn(req.query.code);
+            await user.isAuthenticated();
             await LINE.pushMessage(userId, `Signed in. ${user.payload.username}`);
 
             res.send(`<html>
