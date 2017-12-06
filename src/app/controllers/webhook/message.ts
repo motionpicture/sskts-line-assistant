@@ -134,10 +134,13 @@ export async function askFromWhenAndToWhen(userId: string) {
 export async function publishURI4transactionsCSV(userId: string, dateFrom: string, dateThrough: string) {
     await LINE.pushMessage(userId, `${dateFrom}-${dateThrough}の取引を検索しています...`);
 
+    const startFrom = moment(`${dateFrom}T00:00:00+09:00`, 'YYYYMMDDThh:mm:ssZ');
+    const startThrough = moment(`${dateThrough}T00:00:00+09:00`, 'YYYYMMDDThh:mm:ssZ').add(1, 'day');
+
     const csv = await sskts.service.transaction.placeOrder.download(
         {
-            startFrom: moment(dateFrom, 'YYYYMMDD').toDate(),
-            startThrough: moment(dateThrough, 'YYYYMMDD').add(1, 'day').toDate()
+            startFrom: startFrom.toDate(),
+            startThrough: startThrough.toDate()
         },
         'csv'
     )(new sskts.repository.Transaction(sskts.mongoose.connection));
