@@ -101,7 +101,33 @@ exports.pushButtonsReserveNumOrTel = pushButtonsReserveNumOrTel;
  */
 function askFromWhenAndToWhen(userId) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield LINE.pushMessage(userId, '期間をYYYYMMDD-YYYYMMDD形式で教えてください。');
+        // await LINE.pushMessage(userId, '期間をYYYYMMDD-YYYYMMDD形式で教えてください。');
+        yield request.post('https://api.line.me/v2/bot/message/push', {
+            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+            json: true,
+            body: {
+                to: userId,
+                messages: [
+                    {
+                        type: 'template',
+                        altText: '日付選択',
+                        template: {
+                            type: 'buttons',
+                            text: '日付を選択するか、期間をYYYYMMDD-YYYYMMDD形式で教えてください。',
+                            actions: [
+                                {
+                                    type: 'datetimepicker',
+                                    label: '日付選択',
+                                    mode: 'date',
+                                    data: 'action=searchTransactionsByDate',
+                                    initial: moment().format('YYYY-MM-DD')
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        });
     });
 }
 exports.askFromWhenAndToWhen = askFromWhenAndToWhen;

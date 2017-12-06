@@ -79,6 +79,10 @@ export async function postback(event: any) {
                 await PostbackController.createOwnershipInfos(userId, <string>data.transaction);
                 break;
 
+            case 'searchTransactionsByDate':
+                await PostbackController.searchTransactionsByDate(userId, <string>event.postback.params.date);
+                break;
+
             default:
                 break;
         }

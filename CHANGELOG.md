@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 - install [@motionpicture/sskts-domain@23.4.0](https://www.npmjs.com/package/@motionpicture/sskts-domain)
+- 取引csv検索条件を調整。
 
 ### Deprecated
 
