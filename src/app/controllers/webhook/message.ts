@@ -8,7 +8,7 @@ import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as request from 'request-promise-native';
 
-import * as LINE from '../line';
+import * as LINE from '../../../line';
 
 const debug = createDebug('sskts-line-assistant:controller:webhook:message');
 

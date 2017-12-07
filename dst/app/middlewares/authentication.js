@@ -16,7 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const sskts = require("@motionpicture/sskts-domain");
 const http_status_1 = require("http-status");
 const request = require("request-promise-native");
-const LINE = require("../controllers/line");
+const LINE = require("../../line");
 const user_1 = require("../user");
 exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     try {
@@ -28,7 +28,8 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
         const userId = event.source.userId;
         req.user = new user_1.default({
             host: req.hostname,
-            userId: userId
+            userId: userId,
+            state: JSON.stringify(req.body)
         });
         if (yield req.user.isAuthenticated()) {
             next();

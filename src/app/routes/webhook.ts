@@ -7,6 +7,7 @@ import * as createDebug from 'debug';
 import * as express from 'express';
 import { OK } from 'http-status';
 
+import * as LINE from '../../line';
 import * as WebhookController from '../controllers/webhook';
 import authentication from '../middlewares/authentication';
 
@@ -20,8 +21,7 @@ webhookRouter.all(
         debug('body:', JSON.stringify(req.body));
 
         try {
-            const event: any = (req.body.events !== undefined) ? req.body.events[0] : undefined;
-
+            const event: LINE.IWebhookEvent | undefined = (req.body.events !== undefined) ? req.body.events[0] : undefined;
             if (event !== undefined) {
                 switch (event.type) {
                     case 'message':

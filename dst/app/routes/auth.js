@@ -13,7 +13,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
-const LINE = require("../controllers/line");
+const request = require("request-promise-native");
+const LINE = require("../../line");
 const user_1 = require("../user");
 const authRouter = express.Router();
 /**
@@ -22,20 +23,39 @@ const authRouter = express.Router();
  */
 authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     try {
-        const userId = req.query.state;
+        // stateにはイベントオブジェクトとして受け取ったリクエストボディが入っている
+        const body = JSON.parse(req.query.state);
+        const event = body.events[0];
         const user = new user_1.default({
             host: req.hostname,
-            userId: userId
+            userId: event.source.userId,
+            state: req.query.state
         });
         yield user.signIn(req.query.code);
         yield user.isAuthenticated();
-        yield LINE.pushMessage(userId, `Signed in. ${user.payload.username}`);
+        yield LINE.pushMessage(event.source.userId, `Signed in. ${user.payload.username}`);
+        // イベントを強制的に再送信
+        try {
+            yield request.post(`https://${req.hostname}/webhook`, {
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                form: body
+            });
+        }
+        catch (error) {
+            yield LINE.pushMessage(event.source.userId, error.message);
+        }
+        const location = 'line://';
+        // if (event.type === 'message') {
+        //     location = `line://oaMessage/${LINE_ID}/?${event.message.text}`;
+        // }
         res.send(`
 <html>
 <body onload="location.href='line://'">
 <div style="text-align:center; font-size:400%">
 <h1>Hello ${user.payload.username}.</h1>
-<a href="line://">アプリに戻る</a>
+<a href="${location}">Back to LINE.</a>
 </div>
 </body>
 </html>`);

@@ -16,7 +16,7 @@ const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const request = require("request-promise-native");
-const LINE = require("../line");
+const LINE = require("../../../line");
 const debug = createDebug('sskts-line-assistant:controller:webhook:message');
 /**
  * 使い方を送信する
