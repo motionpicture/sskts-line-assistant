@@ -32,7 +32,7 @@ authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, fu
         yield LINE.pushMessage(userId, `Signed in. ${user.payload.username}`);
         res.send(`
 <html>
-<body>
+<body onload="location.href='line://'">
 <div style="text-align:center; font-size:400%">
 <h1>Hello ${user.payload.username}.</h1>
 <a href="line://">アプリに戻る</a>

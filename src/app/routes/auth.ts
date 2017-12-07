@@ -30,7 +30,7 @@ authRouter.get(
 
             res.send(`
 <html>
-<body>
+<body onload="location.href='line://'">
 <div style="text-align:center; font-size:400%">
 <h1>Hello ${user.payload.username}.</h1>
 <a href="line://">アプリに戻る</a>
