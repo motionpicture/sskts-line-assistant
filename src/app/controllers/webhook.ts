@@ -15,7 +15,7 @@ const debug = createDebug('sskts-line-assistant:controller:webhook');
 /**
  * メッセージが送信されたことを示すEvent Objectです。
  */
-export async function message(event: any) {
+export async function message(event: LINE.IWebhookEvent) {
     const messageText: string = event.message.text;
     const userId = event.source.userId;
 
@@ -52,7 +52,7 @@ export async function message(event: any) {
 /**
  * イベントの送信元が、template messageに付加されたポストバックアクションを実行したことを示すevent objectです。
  */
-export async function postback(event: any) {
+export async function postback(event: LINE.IWebhookEvent) {
     const data = querystring.parse(event.postback.data);
     debug('data:', data);
     const userId = event.source.userId;
@@ -96,34 +96,34 @@ export async function postback(event: any) {
 /**
  * イベント送信元に友だち追加（またはブロック解除）されたことを示すEvent Objectです。
  */
-export async function follow(event: any) {
+export async function follow(event: LINE.IWebhookEvent) {
     debug('event is', event);
 }
 
 /**
  * イベント送信元にブロックされたことを示すevent objectです。
  */
-export async function unfollow(event: any) {
+export async function unfollow(event: LINE.IWebhookEvent) {
     debug('event is', event);
 }
 
 /**
  * イベントの送信元グループまたはトークルームに参加したことを示すevent objectです。
  */
-export async function join(event: any) {
+export async function join(event: LINE.IWebhookEvent) {
     debug('event is', event);
 }
 
 /**
  * イベントの送信元グループから退出させられたことを示すevent objectです。
  */
-export async function leave(event: any) {
+export async function leave(event: LINE.IWebhookEvent) {
     debug('event is', event);
 }
 
 /**
  * イベント送信元のユーザがLINE Beaconデバイスの受信圏内に出入りしたことなどを表すイベントです。
  */
-export async function beacon(event: any) {
+export async function beacon(event: LINE.IWebhookEvent) {
     debug('event is', event);
 }

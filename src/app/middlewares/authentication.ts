@@ -24,7 +24,7 @@ export default async (req: Request, res: Response, next: NextFunction) => {
         req.user = new User({
             host: req.hostname,
             userId: userId,
-            state: JSON.stringify(event)
+            state: JSON.stringify(req.body)
         });
 
         if (await req.user.isAuthenticated()) {

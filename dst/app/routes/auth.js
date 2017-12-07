@@ -13,6 +13,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
+const request = require("request-promise-native");
 const LINE = require("../../line");
 const user_1 = require("../user");
 const authRouter = express.Router();
@@ -22,7 +23,9 @@ const authRouter = express.Router();
  */
 authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     try {
-        const event = JSON.parse(req.query.state);
+        // stateにはイベントオブジェクトとして受け取ったリクエストボディが入っている
+        const body = JSON.parse(req.query.state);
+        const event = body.events[0];
         const user = new user_1.default({
             host: req.hostname,
             userId: event.source.userId,
@@ -31,22 +34,22 @@ authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, fu
         yield user.signIn(req.query.code);
         yield user.isAuthenticated();
         yield LINE.pushMessage(event.source.userId, `Signed in. ${user.payload.username}`);
-        // メッセージイベントであれば、送信
+        // イベントを強制的に再送信
         if (event.type === 'message') {
-            yield LINE.pushMessage(event.source.userId, event.message.text);
+            yield request.post(`https://${req.hostname}/webhook`, {
+                body: body
+            });
         }
-        let location = 'line://';
-        if (event.type === 'message') {
-            const LINE_ID = '@tgg7441y';
-            location = `line://oaMessage/${LINE_ID}/?${event.message.text}`;
-        }
+        const location = 'line://';
+        // if (event.type === 'message') {
+        //     location = `line://oaMessage/${LINE_ID}/?${event.message.text}`;
+        // }
         res.send(`
 <html>
 <body onload="location.href='line://'">
 <div style="text-align:center; font-size:400%">
 <h1>Hello ${user.payload.username}.</h1>
-<a href="${location}">アプリに戻る</a>
-<p>state:${req.query.state}</p>
+<a href="${location}">Back to LINE.</a>
 </div>
 </body>
 </html>`);

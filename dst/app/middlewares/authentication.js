@@ -29,7 +29,7 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
         req.user = new user_1.default({
             host: req.hostname,
             userId: userId,
-            state: JSON.stringify(event)
+            state: JSON.stringify(req.body)
         });
         if (yield req.user.isAuthenticated()) {
             next();
