@@ -28,10 +28,7 @@ authRouter.get(
             await user.isAuthenticated();
             await LINE.pushMessage(userId, `Signed in. ${user.payload.username}`);
 
-            res.send(`<html>
-<body>Signed in. ${user.payload.username}</body>
-</html>
-`);
+            res.send('<html><body onload="open(location, \'_self\').close();"></body></html>');
         } catch (error) {
             next(error);
         }

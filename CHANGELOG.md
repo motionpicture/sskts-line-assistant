@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
+- サインイン後のページが自動的に閉じるように変更。
 
 ### Deprecated
 
