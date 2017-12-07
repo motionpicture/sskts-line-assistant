@@ -63,6 +63,7 @@ export interface IPems {
 export interface IConfigurations {
     host: string;
     userId: string;
+    state: string;
 }
 
 /**
@@ -71,6 +72,7 @@ export interface IConfigurations {
  * @see https://aws.amazon.com/blogs/mobile/integrating-amazon-cognito-user-pools-with-api-gateway/
  */
 export default class User {
+    public state: string;
     public userId: string;
     public payload: IPayload;
     public scopes: string[];
@@ -79,6 +81,7 @@ export default class User {
 
     constructor(configurations: IConfigurations) {
         this.userId = configurations.userId;
+        this.state = configurations.state;
 
         this.authClient = new sasaki.auth.OAuth2({
             domain: <string>process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
@@ -96,7 +99,7 @@ export default class User {
 
         return this.authClient.generateAuthUrl({
             scopes: scopes,
-            state: this.userId,
+            state: this.state,
             codeVerifier: <string>process.env.SSKTS_API_CODE_VERIFIER
         });
     }

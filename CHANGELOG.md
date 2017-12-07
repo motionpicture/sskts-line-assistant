@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
+- ユーザーの状態にウェブフックイベント自体を引き継ぐように変更。
 
 ### Deprecated
 

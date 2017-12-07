@@ -13,7 +13,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
-const LINE = require("../controllers/line");
+const LINE = require("../../line");
 const user_1 = require("../user");
 const authRouter = express.Router();
 /**
@@ -22,20 +22,22 @@ const authRouter = express.Router();
  */
 authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     try {
-        const userId = req.query.state;
+        const event = JSON.parse(req.query.state);
         const user = new user_1.default({
             host: req.hostname,
-            userId: userId
+            userId: event.source.userId,
+            state: req.query.state
         });
         yield user.signIn(req.query.code);
         yield user.isAuthenticated();
-        yield LINE.pushMessage(userId, `Signed in. ${user.payload.username}`);
+        yield LINE.pushMessage(event.source.userId, `Signed in. ${user.payload.username}`);
         res.send(`
 <html>
 <body onload="location.href='line://'">
 <div style="text-align:center; font-size:400%">
 <h1>Hello ${user.payload.username}.</h1>
 <a href="line://">アプリに戻る</a>
+<p>state:${req.query.state}</p>
 </div>
 </body>
 </html>`);

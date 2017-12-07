@@ -6,7 +6,7 @@
 import * as createDebug from 'debug';
 import * as querystring from 'querystring';
 
-import * as LINE from './line';
+import * as LINE from '../../line';
 import * as MessageController from './webhook/message';
 import * as PostbackController from './webhook/postback';
 

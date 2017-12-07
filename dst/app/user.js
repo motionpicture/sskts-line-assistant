@@ -26,6 +26,7 @@ let pems;
 class User {
     constructor(configurations) {
         this.userId = configurations.userId;
+        this.state = configurations.state;
         this.authClient = new sasaki.auth.OAuth2({
             domain: process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
             clientId: process.env.SSKTS_API_CLIENT_ID,
@@ -40,7 +41,7 @@ class User {
         ];
         return this.authClient.generateAuthUrl({
             scopes: scopes,
-            state: this.userId,
+            state: this.state,
             codeVerifier: process.env.SSKTS_API_CODE_VERIFIER
         });
     }

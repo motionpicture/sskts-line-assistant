@@ -17,7 +17,7 @@ const createDebug = require("debug");
 const moment = require("moment");
 const request = require("request-promise-native");
 const util = require("util");
-const LINE = require("../line");
+const LINE = require("../../../line");
 const debug = createDebug('sskts-line-assistant:controller:webhook:postback');
 const MESSAGE_TRANSACTION_NOT_FOUND = '該当取引はありません';
 /**
