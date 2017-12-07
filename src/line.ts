@@ -3,7 +3,7 @@
  * @namespace line
  */
 
-export type IEventType = 'Message' | 'Follow' | 'Unfollow' | 'Join' | 'Leave' | 'Postback' | 'Beacon' | 'Unfollow';
+export type IEventType = 'message' | 'follow' | 'unfollow' | 'join' | 'leave' | 'postback' | 'beacon';
 export interface IWebhookEvent {
     // tslint:disable-next-line:no-reserved-keywords
     type: IEventType;

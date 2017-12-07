@@ -63,6 +63,7 @@ npm start
 | `REDIS_HOST`                        | true                  |                        | ログイン状態保持ストレージ               |
 | `REDIS_PORT`                        | true                  |                        | ログイン状態保持ストレージ               |
 | `REDIS_KEY`                         | true                  |                        | ログイン状態保持ストレージ               |
+| `USER_EXPIRES_IN_SECONDS`           | true                  |                        | ユーザーセッション保持期間               |
 | `WEBSITE_NODE_DEFAULT_VERSION`      | only on Azure WebApps |                        | Node.js version                 |
 | `WEBSITE_TIME_ZONE`                 | only on Azure WebApps | Tokyo Standard Time    |
 

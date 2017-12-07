@@ -66,6 +66,12 @@ export interface IConfigurations {
     state: string;
 }
 
+if (process.env.USER_EXPIRES_IN_SECONDS === undefined) {
+    throw new Error('USER_EXPIRES_IN_SECONDS undefined.');
+}
+// tslint:disable-next-line:no-magic-numbers
+const EXPIRES_IN_SECONDS = parseInt(<string>process.env.USER_EXPIRES_IN_SECONDS, 10);
+
 /**
  * LINEユーザー
  * @class
@@ -133,9 +139,7 @@ export default class User {
         // ログイン状態を保持
         const results = await redisClient.multi()
             .set(`token.${this.userId}`, credentials.access_token)
-            // ひとまず60秒保持
-            // tslint:disable-next-line:no-magic-numbers
-            .expire(`token.${this.userId}`, 60, debug)
+            .expire(`token.${this.userId}`, EXPIRES_IN_SECONDS, debug)
             .exec();
         debug('results:', results);
 

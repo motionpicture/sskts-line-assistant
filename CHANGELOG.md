@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- ユーザーセッション保持期間設定を追加。
 
 ### Changed
 - ユーザーの状態にウェブフックイベント自体を引き継ぐように変更。

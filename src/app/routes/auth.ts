@@ -29,12 +29,22 @@ authRouter.get(
             await user.isAuthenticated();
             await LINE.pushMessage(event.source.userId, `Signed in. ${user.payload.username}`);
 
+            // メッセージイベントであれば、送信
+            if (event.type === 'message') {
+                await LINE.pushMessage(event.source.userId, event.message.text);
+            }
+
+            let location = 'line://';
+            if (event.type === 'message') {
+                location = `line://msg/text/?${event.message.text}`;
+            }
+
             res.send(`
 <html>
 <body onload="location.href='line://'">
 <div style="text-align:center; font-size:400%">
 <h1>Hello ${user.payload.username}.</h1>
-<a href="line://">アプリに戻る</a>
+<a href="${location}">アプリに戻る</a>
 <p>state:${req.query.state}</p>
 </div>
 </body>
