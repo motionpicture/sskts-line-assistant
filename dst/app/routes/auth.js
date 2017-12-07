@@ -30,7 +30,14 @@ authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, fu
         yield user.signIn(req.query.code);
         yield user.isAuthenticated();
         yield LINE.pushMessage(userId, `Signed in. ${user.payload.username}`);
-        res.send('<html><body onload="window.open(\'about:blank\', \'_self\').close();"></body></html>');
+        // tslint:disable-next-line:no-multiline-string
+        res.send(`
+<html>
+<body onload="window.open(\'about:blank\', \'_self\').close();">
+<a onclick="window.close();">閉じる</a>
+<a href="line://">戻る</a>
+</body>
+</html>`);
     }
     catch (error) {
         next(error);
