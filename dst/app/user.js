@@ -18,6 +18,11 @@ const redis_1 = require("../redis");
 const debug = createDebug('sskts-line-assistant:user');
 const ISSUER = process.env.SSKTS_API_TOKEN_ISSUER;
 let pems;
+if (process.env.USER_EXPIRES_IN_SECONDS === undefined) {
+    throw new Error('USER_EXPIRES_IN_SECONDS undefined.');
+}
+// tslint:disable-next-line:no-magic-numbers
+const EXPIRES_IN_SECONDS = parseInt(process.env.USER_EXPIRES_IN_SECONDS, 10);
 /**
  * LINEユーザー
  * @class
@@ -26,6 +31,7 @@ let pems;
 class User {
     constructor(configurations) {
         this.userId = configurations.userId;
+        this.state = configurations.state;
         this.authClient = new sasaki.auth.OAuth2({
             domain: process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
             clientId: process.env.SSKTS_API_CLIENT_ID,
@@ -40,7 +46,7 @@ class User {
         ];
         return this.authClient.generateAuthUrl({
             scopes: scopes,
-            state: this.userId,
+            state: this.state,
             codeVerifier: process.env.SSKTS_API_CODE_VERIFIER
         });
     }
@@ -71,7 +77,7 @@ class User {
             // ログイン状態を保持
             const results = yield redis_1.default.multi()
                 .set(`token.${this.userId}`, credentials.access_token)
-                .expire(`token.${this.userId}`, 60, debug)
+                .expire(`token.${this.userId}`, EXPIRES_IN_SECONDS, debug)
                 .exec();
             debug('results:', results);
             return credentials;

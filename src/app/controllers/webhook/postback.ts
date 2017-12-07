@@ -9,7 +9,7 @@ import * as moment from 'moment';
 import * as request from 'request-promise-native';
 import * as util from 'util';
 
-import * as LINE from '../line';
+import * as LINE from '../../../line';
 
 const debug = createDebug('sskts-line-assistant:controller:webhook:postback');
 const MESSAGE_TRANSACTION_NOT_FOUND = '該当取引はありません';

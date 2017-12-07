@@ -14,7 +14,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const createDebug = require("debug");
 const querystring = require("querystring");
-const LINE = require("./line");
+const LINE = require("../../line");
 const MessageController = require("./webhook/message");
 const PostbackController = require("./webhook/postback");
 const debug = createDebug('sskts-line-assistant:controller:webhook');

@@ -9,13 +9,13 @@ import { NextFunction, Request, Response } from 'express';
 import { OK } from 'http-status';
 import * as request from 'request-promise-native';
 
-import * as LINE from '../controllers/line';
+import * as LINE from '../../line';
 import User from '../user';
 
 export default async (req: Request, res: Response, next: NextFunction) => {
     try {
         // RedisからBearerトークンを取り出す
-        const event: any = (req.body.events !== undefined) ? req.body.events[0] : undefined;
+        const event: LINE.IWebhookEvent | undefined = (req.body.events !== undefined) ? req.body.events[0] : undefined;
         if (event === undefined) {
             throw new Error('Invalid request.');
         }
@@ -23,7 +23,8 @@ export default async (req: Request, res: Response, next: NextFunction) => {
         const userId = event.source.userId;
         req.user = new User({
             host: req.hostname,
-            userId: userId
+            userId: userId,
+            state: JSON.stringify(req.body)
         });
 
         if (await req.user.isAuthenticated()) {

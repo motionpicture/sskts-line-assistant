@@ -63,7 +63,14 @@ export interface IPems {
 export interface IConfigurations {
     host: string;
     userId: string;
+    state: string;
 }
+
+if (process.env.USER_EXPIRES_IN_SECONDS === undefined) {
+    throw new Error('USER_EXPIRES_IN_SECONDS undefined.');
+}
+// tslint:disable-next-line:no-magic-numbers
+const EXPIRES_IN_SECONDS = parseInt(<string>process.env.USER_EXPIRES_IN_SECONDS, 10);
 
 /**
  * LINEユーザー
@@ -71,6 +78,7 @@ export interface IConfigurations {
  * @see https://aws.amazon.com/blogs/mobile/integrating-amazon-cognito-user-pools-with-api-gateway/
  */
 export default class User {
+    public state: string;
     public userId: string;
     public payload: IPayload;
     public scopes: string[];
@@ -79,6 +87,7 @@ export default class User {
 
     constructor(configurations: IConfigurations) {
         this.userId = configurations.userId;
+        this.state = configurations.state;
 
         this.authClient = new sasaki.auth.OAuth2({
             domain: <string>process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
@@ -96,7 +105,7 @@ export default class User {
 
         return this.authClient.generateAuthUrl({
             scopes: scopes,
-            state: this.userId,
+            state: this.state,
             codeVerifier: <string>process.env.SSKTS_API_CODE_VERIFIER
         });
     }
@@ -130,9 +139,7 @@ export default class User {
         // ログイン状態を保持
         const results = await redisClient.multi()
             .set(`token.${this.userId}`, credentials.access_token)
-            // ひとまず60秒保持
-            // tslint:disable-next-line:no-magic-numbers
-            .expire(`token.${this.userId}`, 60, debug)
+            .expire(`token.${this.userId}`, EXPIRES_IN_SECONDS, debug)
             .exec();
         debug('results:', results);
 

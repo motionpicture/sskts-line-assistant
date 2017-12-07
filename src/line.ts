@@ -1,7 +1,24 @@
 /**
- * LINE APIコントローラー
- * @namespace app.controllers.line
+ * LINEモジュール
+ * @namespace line
  */
+
+export type IEventType = 'message' | 'follow' | 'unfollow' | 'join' | 'leave' | 'postback' | 'beacon';
+export interface IWebhookEvent {
+    // tslint:disable-next-line:no-reserved-keywords
+    type: IEventType;
+    timestamp: number;
+    source: {
+        // tslint:disable-next-line:no-reserved-keywords
+        type: 'user' | 'group' | 'room';
+        userId: string;
+        groupId?: string;
+        roomId?: string;
+    };
+    message?: any;
+    postback?: any;
+    replyToken?: string;
+}
 
 import * as createDebug from 'debug';
 import * as request from 'request-promise-native';
