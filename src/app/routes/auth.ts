@@ -33,14 +33,15 @@ authRouter.get(
             await LINE.pushMessage(event.source.userId, `Signed in. ${user.payload.username}`);
 
             // イベントを強制的に再送信
-            if (event.type === 'message') {
-                try {
-                    await request.post(`https://${req.hostname}/webhook`, {
-                        body: body
-                    });
-                } catch (error) {
-                    await LINE.pushMessage(event.source.userId, error.message);
-                }
+            try {
+                await request.post(`https://${req.hostname}/webhook`, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    form: body
+                });
+            } catch (error) {
+                await LINE.pushMessage(event.source.userId, error.message);
             }
 
             const location = 'line://';
