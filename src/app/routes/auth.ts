@@ -28,12 +28,13 @@ authRouter.get(
             await user.isAuthenticated();
             await LINE.pushMessage(userId, `Signed in. ${user.payload.username}`);
 
-            // tslint:disable-next-line:no-multiline-string
             res.send(`
 <html>
-<body onload="window.open(\'about:blank\', \'_self\').close();">
-<a onclick="window.close();">閉じる</a>
-<a href="line://">戻る</a>
+<body>
+<div style="text-align:center; font-size:400%">
+<h1>Hello ${user.payload.username}.</h1>
+<a href="line://">アプリに戻る</a>
+</div>
 </body>
 </html>`
             );
