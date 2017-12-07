@@ -5,10 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
-- ユーザーセッション保持期間設定を追加。
 
 ### Changed
-- ユーザーの状態にウェブフックイベント自体を引き継ぐように変更。
 
 ### Deprecated
 
@@ -18,6 +16,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+
+## v2.1.2 - 2017-12-07
+### Added
+- ユーザーセッション保持期間設定を追加。
+
+### Changed
+- ユーザーの状態にウェブフックイベント自体を引き継ぐように変更。
 
 ## v2.1.1 - 2017-12-07
 ### Changed
