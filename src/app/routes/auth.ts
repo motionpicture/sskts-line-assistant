@@ -34,9 +34,13 @@ authRouter.get(
 
             // イベントを強制的に再送信
             if (event.type === 'message') {
-                await request.post(`https://${req.hostname}/webhook`, {
-                    body: body
-                });
+                try {
+                    await request.post(`https://${req.hostname}/webhook`, {
+                        body: body
+                    });
+                } catch (error) {
+                    await LINE.pushMessage(event.source.userId, error.message);
+                }
             }
 
             const location = 'line://';

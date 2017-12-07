@@ -36,9 +36,14 @@ authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, fu
         yield LINE.pushMessage(event.source.userId, `Signed in. ${user.payload.username}`);
         // イベントを強制的に再送信
         if (event.type === 'message') {
-            yield request.post(`https://${req.hostname}/webhook`, {
-                body: body
-            });
+            try {
+                yield request.post(`https://${req.hostname}/webhook`, {
+                    body: body
+                });
+            }
+            catch (error) {
+                yield LINE.pushMessage(event.source.userId, error.message);
+            }
         }
         const location = 'line://';
         // if (event.type === 'message') {
