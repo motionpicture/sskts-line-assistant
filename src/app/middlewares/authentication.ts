@@ -34,7 +34,7 @@ export default async (req: Request, res: Response, next: NextFunction) => {
         }
 
         // ログインボタンを送信
-        await LINE.pushMessage(userId, req.user.generateAuthUrl());
+        // await LINE.pushMessage(userId, req.user.generateAuthUrl());
         await request.post({
             simple: false,
             url: LINE.URL_PUSH_MESSAGE,

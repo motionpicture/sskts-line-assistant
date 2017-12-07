@@ -36,7 +36,8 @@ authRouter.get(
 
             let location = 'line://';
             if (event.type === 'message') {
-                location = `line://msg/text/?${event.message.text}`;
+                const LINE_ID = '@tgg7441y';
+                location = `line://oaMessage/${LINE_ID}/?${event.message.text}`;
             }
 
             res.send(`
