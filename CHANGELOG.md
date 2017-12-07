@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Security
 
 
+## v2.1.1 - 2017-12-07
+### Changed
+- サインイン後のページに戻るリンクを追加。
+
 ## v2.1.0 - 2017-12-06
 ### Added
 - Cognitoユーザー認証追加。
