@@ -15,8 +15,6 @@ const debug = createDebug('sskts-line-assistant:controller:webhook:message');
 /**
  * 使い方を送信する
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 export async function pushHowToUse(userId: string) {
     // tslint:disable-next-line:no-multiline-string
@@ -42,8 +40,6 @@ csvの項目が充実しました！
 /**
  * 予約番号or電話番号のボタンを送信する
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 export async function pushButtonsReserveNumOrTel(userId: string, message: string) {
     debug(userId, message);
@@ -88,8 +84,6 @@ export async function pushButtonsReserveNumOrTel(userId: string, message: string
 /**
  * 日付選択を求める
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 export async function askFromWhenAndToWhen(userId: string) {
     // await LINE.pushMessage(userId, '期間をYYYYMMDD-YYYYMMDD形式で教えてください。');
@@ -121,15 +115,13 @@ export async function askFromWhenAndToWhen(userId: string) {
                 ]
             }
         }
-    );
+    ).promise();
 
 }
 
 /**
  * 取引CSVダウンロードURIを発行する
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 export async function publishURI4transactionsCSV(userId: string, dateFrom: string, dateThrough: string) {
     await LINE.pushMessage(userId, `${dateFrom}-${dateThrough}の取引を検索しています...`);

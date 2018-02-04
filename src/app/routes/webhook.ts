@@ -32,32 +32,41 @@ webhookRouter.all(
                         await WebhookController.postback(event);
                         break;
 
+                    // tslint:disable-next-line:no-single-line-block-comment
+                    /* istanbul ignore next */
                     case 'follow':
                         await WebhookController.follow(event);
                         break;
 
+                    // tslint:disable-next-line:no-single-line-block-comment
+                    /* istanbul ignore next */
                     case 'unfollow':
                         await WebhookController.unfollow(event);
                         break;
 
+                    // tslint:disable-next-line:no-single-line-block-comment
+                    /* istanbul ignore next */
                     case 'join':
                         await WebhookController.join(event);
                         break;
 
+                    // tslint:disable-next-line:no-single-line-block-comment
+                    /* istanbul ignore next */
                     case 'leave':
                         await WebhookController.leave(event);
                         break;
 
+                    // tslint:disable-next-line:no-single-line-block-comment
+                    /* istanbul ignore next */
                     case 'beacon':
                         await WebhookController.postback(event);
                         break;
 
                     default:
-                        break;
                 }
             }
         } catch (error) {
-            console.error(error);
+            debug(error);
         }
 
         res.status(OK).send('ok');

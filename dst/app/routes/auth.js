@@ -21,6 +21,8 @@ const authRouter = express.Router();
  * サインイン
  * Cognitoからリダイレクトしてくる
  */
+// tslint:disable-next-line:no-single-line-block-comment
+/* istanbul ignore next */
 authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     try {
         // stateにはイベントオブジェクトとして受け取ったリクエストボディが入っている
@@ -32,7 +34,6 @@ authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, fu
             state: req.query.state
         });
         yield user.signIn(req.query.code);
-        yield user.isAuthenticated();
         yield LINE.pushMessage(event.source.userId, `Signed in. ${user.payload.username}`);
         // イベントを強制的に再送信
         try {
@@ -41,7 +42,7 @@ authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, fu
                     'Content-Type': 'application/json'
                 },
                 form: body
-            });
+            }).promise();
         }
         catch (error) {
             yield LINE.pushMessage(event.source.userId, error.message);
@@ -59,6 +60,42 @@ authRouter.get('/signIn', (req, res, next) => __awaiter(this, void 0, void 0, fu
 </div>
 </body>
 </html>`);
+    }
+    catch (error) {
+        next(error);
+    }
+}));
+/**
+ * ログアウト
+ */
+// tslint:disable-next-line:no-single-line-block-comment
+/* istanbul ignore next */
+authRouter.get('/logout', (req, res, next) => __awaiter(this, void 0, void 0, function* () {
+    try {
+        if (req.query.userId !== undefined) {
+            const user = new user_1.default({
+                host: req.hostname,
+                userId: req.query.userId,
+                state: ''
+            });
+            // アプリケーション側でログアウト
+            yield user.logout();
+            yield LINE.pushMessage(user.userId, 'Logged out.');
+            // Cognitoからもログアウト
+            res.redirect(user.generateLogoutUrl());
+        }
+        else {
+            const location = 'line://';
+            res.send(`
+<html>
+<body onload="location.href='line://'">
+<div style="text-align:center; font-size:400%">
+<h1>Logged out.</h1>
+<a href="${location}">Back to LINE.</a>
+</div>
+</body>
+</html>`);
+        }
     }
     catch (error) {
         next(error);

@@ -40,7 +40,6 @@ export async function message(event: LINE.IWebhookEvent) {
             default:
                 // 予約照会方法をアドバイス
                 await MessageController.pushHowToUse(userId);
-                break;
         }
     } catch (error) {
         console.error(error);
@@ -84,7 +83,6 @@ export async function postback(event: LINE.IWebhookEvent) {
                 break;
 
             default:
-                break;
         }
     } catch (error) {
         console.error(error);

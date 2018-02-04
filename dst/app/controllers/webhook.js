@@ -43,7 +43,6 @@ function message(event) {
                 default:
                     // 予約照会方法をアドバイス
                     yield MessageController.pushHowToUse(userId);
-                    break;
             }
         }
         catch (error) {
@@ -83,7 +82,6 @@ function postback(event) {
                     yield PostbackController.searchTransactionsByDate(userId, event.postback.params.date);
                     break;
                 default:
-                    break;
             }
         }
         catch (error) {

@@ -1,6 +1,5 @@
 /**
  * LINEモジュール
- * @namespace line
  */
 
 export type IEventType = 'message' | 'follow' | 'unfollow' | 'join' | 'leave' | 'postback' | 'beacon';
@@ -30,10 +29,8 @@ export const URL_PUSH_MESSAGE = 'https://api.line.me/v2/bot/message/push';
 /**
  * メッセージ送信
  * @export
- * @function
- * @memberof app.controllers.line
- * @param {string} userId LINEユーザーID
- * @param {string} text メッセージ
+ * @param userId LINEユーザーID
+ * @param text メッセージ
  */
 export async function pushMessage(userId: string, text: string) {
     debug('pushing a message...', text);

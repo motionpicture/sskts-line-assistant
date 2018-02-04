@@ -13,14 +13,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const sskts = require("@motionpicture/sskts-domain");
-const http_status_1 = require("http-status");
 const request = require("request-promise-native");
 const LINE = require("../../line");
-const user_1 = require("../user");
 exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     try {
-        // RedisからBearerトークンを取り出す
+        // ユーザー認証無効化の設定の場合
+        if (process.env.USER_AUTHENTICATION_DISABLED === '1') {
+            next();
+            return;
+        }
         const event = (req.body.events !== undefined) ? req.body.events[0] : undefined;
         if (event === undefined) {
             throw new Error('Invalid request.');
@@ -31,19 +32,39 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
             userId: userId,
             state: JSON.stringify(req.body)
         });
-        if (yield req.user.isAuthenticated()) {
-            next();
-            return;
+        const credentials = yield req.user.getCredentials();
+        if (credentials === null) {
+            throw new sskts.factory.errors.Unauthorized();
         }
-        // ログインボタンを送信
-        // await LINE.pushMessage(userId, req.user.generateAuthUrl());
+        // RedisからBearerトークンを取り出す
+        yield express_middleware_1.cognitoAuth({
+            issuers: [process.env.API_TOKEN_ISSUER],
+            authorizedHandler: () => __awaiter(this, void 0, void 0, function* () {
+                // ログイン状態をセットしてnext
+                req.user.setCredentials(credentials);
+                next();
+            }),
+            unauthorizedHandler: () => __awaiter(this, void 0, void 0, function* () {
+                // ログインボタンを送信
+                yield sendLoginButton(req.user);
+                res.status(http_status_1.OK).send('ok');
+            }),
+            tokenDetecter: () => __awaiter(this, void 0, void 0, function* () { return credentials.access_token; })
+        })(req, res, next);
+    }
+    catch (error) {
+        next(new sskts.factory.errors.Unauthorized(error.message));
+    }
+});
+function sendLoginButton(user) {
+    return __awaiter(this, void 0, void 0, function* () {
         yield request.post({
             simple: false,
             url: LINE.URL_PUSH_MESSAGE,
             auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
             json: true,
             body: {
-                to: userId,
+                to: user.userId,
                 messages: [
                     {
                         type: 'template',
@@ -55,17 +76,14 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
                                 {
                                     type: 'uri',
                                     label: 'Sign In',
-                                    uri: req.user.generateAuthUrl()
+                                    uri: user.generateAuthUrl()
                                 }
                             ]
                         }
                     }
                 ]
             }
-        });
-        res.status(http_status_1.OK).send('ok');
-    }
-    catch (error) {
-        next(new sskts.factory.errors.Unauthorized(error.message));
-    }
-});
+        }).promise();
+    });
+}
+exports.sendLoginButton = sendLoginButton;

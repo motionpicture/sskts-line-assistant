@@ -31,28 +31,37 @@ webhookRouter.all('/', authentication_1.default, (req, res) => __awaiter(this, v
                 case 'postback':
                     yield WebhookController.postback(event);
                     break;
+                // tslint:disable-next-line:no-single-line-block-comment
+                /* istanbul ignore next */
                 case 'follow':
                     yield WebhookController.follow(event);
                     break;
+                // tslint:disable-next-line:no-single-line-block-comment
+                /* istanbul ignore next */
                 case 'unfollow':
                     yield WebhookController.unfollow(event);
                     break;
+                // tslint:disable-next-line:no-single-line-block-comment
+                /* istanbul ignore next */
                 case 'join':
                     yield WebhookController.join(event);
                     break;
+                // tslint:disable-next-line:no-single-line-block-comment
+                /* istanbul ignore next */
                 case 'leave':
                     yield WebhookController.leave(event);
                     break;
+                // tslint:disable-next-line:no-single-line-block-comment
+                /* istanbul ignore next */
                 case 'beacon':
                     yield WebhookController.postback(event);
                     break;
                 default:
-                    break;
             }
         }
     }
     catch (error) {
-        console.error(error);
+        debug(error);
     }
     res.status(http_status_1.OK).send('ok');
 }));
