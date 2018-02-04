@@ -13,8 +13,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const express_middleware_1 = require("@motionpicture/express-middleware");
+const sskts = require("@motionpicture/sskts-domain");
+const http_status_1 = require("http-status");
 const request = require("request-promise-native");
 const LINE = require("../../line");
+const user_1 = require("../user");
 exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     try {
         // ユーザー認証無効化の設定の場合
