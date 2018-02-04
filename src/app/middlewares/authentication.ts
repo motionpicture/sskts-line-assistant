@@ -34,7 +34,11 @@ export default async (req: Request, res: Response, next: NextFunction) => {
         });
         const credentials = await req.user.getCredentials();
         if (credentials === null) {
-            throw new sskts.factory.errors.Unauthorized();
+            // ログインボタンを送信
+            await sendLoginButton(req.user);
+            res.status(OK).send('ok');
+
+            return;
         }
 
         // RedisからBearerトークンを取り出す

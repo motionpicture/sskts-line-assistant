@@ -38,7 +38,10 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
         });
         const credentials = yield req.user.getCredentials();
         if (credentials === null) {
-            throw new sskts.factory.errors.Unauthorized();
+            // ログインボタンを送信
+            yield sendLoginButton(req.user);
+            res.status(http_status_1.OK).send('ok');
+            return;
         }
         // RedisからBearerトークンを取り出す
         yield express_middleware_1.cognitoAuth({
