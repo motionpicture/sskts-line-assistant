@@ -26,10 +26,10 @@ webhookRouter.all('/', authentication_1.default, (req, res) => __awaiter(this, v
         if (event !== undefined) {
             switch (event.type) {
                 case 'message':
-                    yield WebhookController.message(event);
+                    yield WebhookController.message(event, req.user);
                     break;
                 case 'postback':
-                    yield WebhookController.postback(event);
+                    yield WebhookController.postback(event, req.user);
                     break;
                 // tslint:disable-next-line:no-single-line-block-comment
                 /* istanbul ignore next */
@@ -54,7 +54,7 @@ webhookRouter.all('/', authentication_1.default, (req, res) => __awaiter(this, v
                 // tslint:disable-next-line:no-single-line-block-comment
                 /* istanbul ignore next */
                 case 'beacon':
-                    yield WebhookController.postback(event);
+                    yield WebhookController.postback(event, req.user);
                     break;
                 default:
             }

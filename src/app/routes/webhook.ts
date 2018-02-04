@@ -25,11 +25,11 @@ webhookRouter.all(
             if (event !== undefined) {
                 switch (event.type) {
                     case 'message':
-                        await WebhookController.message(event);
+                        await WebhookController.message(event, req.user);
                         break;
 
                     case 'postback':
-                        await WebhookController.postback(event);
+                        await WebhookController.postback(event, req.user);
                         break;
 
                     // tslint:disable-next-line:no-single-line-block-comment
@@ -59,7 +59,7 @@ webhookRouter.all(
                     // tslint:disable-next-line:no-single-line-block-comment
                     /* istanbul ignore next */
                     case 'beacon':
-                        await WebhookController.postback(event);
+                        await WebhookController.postback(event, req.user);
                         break;
 
                     default:

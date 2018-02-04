@@ -147,3 +147,34 @@ function publishURI4transactionsCSV(userId, dateFrom, dateThrough) {
     });
 }
 exports.publishURI4transactionsCSV = publishURI4transactionsCSV;
+function logout(user) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield request.post({
+            simple: false,
+            url: LINE.URL_PUSH_MESSAGE,
+            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+            json: true,
+            body: {
+                to: user.userId,
+                messages: [
+                    {
+                        type: 'template',
+                        altText: 'ログアウトボタン',
+                        template: {
+                            type: 'buttons',
+                            text: '本当にログアウトしますか？',
+                            actions: [
+                                {
+                                    type: 'uri',
+                                    label: 'Log out',
+                                    uri: `https://${user.host}/logout?userId=${user.userId}`
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }).promise();
+    });
+}
+exports.logout = logout;

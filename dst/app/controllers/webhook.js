@@ -21,7 +21,7 @@ const debug = createDebug('sskts-line-assistant:controller:webhook');
 /**
  * メッセージが送信されたことを示すEvent Objectです。
  */
-function message(event) {
+function message(event, user) {
     return __awaiter(this, void 0, void 0, function* () {
         const messageText = event.message.text;
         const userId = event.source.userId;
@@ -40,6 +40,10 @@ function message(event) {
                     // tslint:disable-next-line:no-magic-numbers
                     yield MessageController.publishURI4transactionsCSV(userId, messageText.substr(0, 8), messageText.substr(9, 8));
                     break;
+                // ログアウト
+                case /^logout$/.test(messageText):
+                    yield MessageController.logout(user);
+                    break;
                 default:
                     // 予約照会方法をアドバイス
                     yield MessageController.pushHowToUse(userId);
@@ -56,7 +60,7 @@ exports.message = message;
 /**
  * イベントの送信元が、template messageに付加されたポストバックアクションを実行したことを示すevent objectです。
  */
-function postback(event) {
+function postback(event, __) {
     return __awaiter(this, void 0, void 0, function* () {
         const data = querystring.parse(event.postback.data);
         debug('data:', data);
