@@ -11,13 +11,17 @@
         "arrow-return-shorthand": [
             true
         ],
+        "await-promise": [
+            true,
+            "Bluebird"
+        ],
         "curly": true,
         "export-name": false,
         "import-name": false,
         "interface-over-type-literal": true,
         "linebreak-style": [
-            "LF",
-            true
+            true,
+            "LF"
         ],
         "no-any": false,
         "no-backbone-get-set-outside-model": false,

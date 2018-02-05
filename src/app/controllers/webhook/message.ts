@@ -9,21 +9,19 @@ import * as moment from 'moment';
 import * as request from 'request-promise-native';
 
 import * as LINE from '../../../line';
+import User from '../../user';
 
 const debug = createDebug('sskts-line-assistant:controller:webhook:message');
 
 /**
  * 使い方を送信する
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 export async function pushHowToUse(userId: string) {
     // tslint:disable-next-line:no-multiline-string
     const text = `How to use
 ******** new! ********
-csvの項目が充実しました！
-所有権作成タスクを実行できるようになりました！
+ログアウトできるようになりました。
 ******** new! ********
 --------------------
 取引照会
@@ -34,7 +32,12 @@ csvの項目が充実しました！
 --------------------
 取引CSVダウンロード
 --------------------
-「csv」と入力`;
+'csv'と入力
+
+--------------------
+ログアウト
+--------------------
+'logout'と入力`;
 
     await LINE.pushMessage(userId, text);
 }
@@ -42,8 +45,6 @@ csvの項目が充実しました！
 /**
  * 予約番号or電話番号のボタンを送信する
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 export async function pushButtonsReserveNumOrTel(userId: string, message: string) {
     debug(userId, message);
@@ -88,8 +89,6 @@ export async function pushButtonsReserveNumOrTel(userId: string, message: string
 /**
  * 日付選択を求める
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 export async function askFromWhenAndToWhen(userId: string) {
     // await LINE.pushMessage(userId, '期間をYYYYMMDD-YYYYMMDD形式で教えてください。');
@@ -121,15 +120,13 @@ export async function askFromWhenAndToWhen(userId: string) {
                 ]
             }
         }
-    );
+    ).promise();
 
 }
 
 /**
  * 取引CSVダウンロードURIを発行する
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 export async function publishURI4transactionsCSV(userId: string, dateFrom: string, dateThrough: string) {
     await LINE.pushMessage(userId, `${dateFrom}-${dateThrough}の取引を検索しています...`);
@@ -153,4 +150,33 @@ export async function publishURI4transactionsCSV(userId: string, dateFrom: strin
     })();
 
     await LINE.pushMessage(userId, `download -> ${sasUrl} `);
+}
+
+export async function logout(user: User) {
+    await request.post({
+        simple: false,
+        url: LINE.URL_PUSH_MESSAGE,
+        auth: { bearer: <string>process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+        json: true,
+        body: {
+            to: user.userId,
+            messages: [
+                {
+                    type: 'template',
+                    altText: 'Log out',
+                    template: {
+                        type: 'buttons',
+                        text: '本当にログアウトしますか？',
+                        actions: [
+                            {
+                                type: 'uri',
+                                label: 'Log out',
+                                uri: `https://${user.host}/logout?userId=${user.userId}`
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }).promise();
 }

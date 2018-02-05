@@ -7,6 +7,7 @@ import * as createDebug from 'debug';
 import * as querystring from 'querystring';
 
 import * as LINE from '../../line';
+import User from '../user';
 import * as MessageController from './webhook/message';
 import * as PostbackController from './webhook/postback';
 
@@ -15,7 +16,7 @@ const debug = createDebug('sskts-line-assistant:controller:webhook');
 /**
  * メッセージが送信されたことを示すEvent Objectです。
  */
-export async function message(event: LINE.IWebhookEvent) {
+export async function message(event: LINE.IWebhookEvent, user: User) {
     const messageText: string = event.message.text;
     const userId = event.source.userId;
 
@@ -37,10 +38,14 @@ export async function message(event: LINE.IWebhookEvent) {
                 await MessageController.publishURI4transactionsCSV(userId, messageText.substr(0, 8), messageText.substr(9, 8));
                 break;
 
+            // ログアウト
+            case /^logout$/.test(messageText):
+                await MessageController.logout(user);
+                break;
+
             default:
                 // 予約照会方法をアドバイス
                 await MessageController.pushHowToUse(userId);
-                break;
         }
     } catch (error) {
         console.error(error);
@@ -52,7 +57,7 @@ export async function message(event: LINE.IWebhookEvent) {
 /**
  * イベントの送信元が、template messageに付加されたポストバックアクションを実行したことを示すevent objectです。
  */
-export async function postback(event: LINE.IWebhookEvent) {
+export async function postback(event: LINE.IWebhookEvent, __: User) {
     const data = querystring.parse(event.postback.data);
     debug('data:', data);
     const userId = event.source.userId;
@@ -84,7 +89,6 @@ export async function postback(event: LINE.IWebhookEvent) {
                 break;
 
             default:
-                break;
         }
     } catch (error) {
         console.error(error);

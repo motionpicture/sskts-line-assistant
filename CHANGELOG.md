@@ -17,6 +17,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Security
 
 
+## v2.2.0 - 2018-02-05
+### Changed
+- Cognito管理者ユーザーとの連携を調整。
+- ログアウト機能を追加。
+
 ## v2.1.2 - 2017-12-07
 ### Added
 - ユーザーセッション保持期間設定を追加。
