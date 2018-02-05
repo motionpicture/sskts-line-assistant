@@ -75,10 +75,10 @@ function sendLoginButton(user) {
                 messages: [
                     {
                         type: 'template',
-                        altText: 'ログインボタン',
+                        altText: 'Sign In',
                         template: {
                             type: 'buttons',
-                            text: 'ログインしてください。',
+                            text: 'ログインしてください。ユーザー情報が不明な場合、管理者に直接問い合わせてください。',
                             actions: [
                                 {
                                     type: 'uri',

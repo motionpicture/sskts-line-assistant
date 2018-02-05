@@ -21,8 +21,7 @@ export async function pushHowToUse(userId: string) {
     // tslint:disable-next-line:no-multiline-string
     const text = `How to use
 ******** new! ********
-csvの項目が充実しました！
-所有権作成タスクを実行できるようになりました！
+ログアウトできるようになりました。
 ******** new! ********
 --------------------
 取引照会
@@ -33,7 +32,12 @@ csvの項目が充実しました！
 --------------------
 取引CSVダウンロード
 --------------------
-「csv」と入力`;
+'csv'と入力
+
+--------------------
+ログアウト
+--------------------
+'logout'と入力`;
 
     await LINE.pushMessage(userId, text);
 }
@@ -159,7 +163,7 @@ export async function logout(user: User) {
             messages: [
                 {
                     type: 'template',
-                    altText: 'ログアウトボタン',
+                    altText: 'Log out',
                     template: {
                         type: 'buttons',
                         text: '本当にログアウトしますか？',
