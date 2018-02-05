@@ -15,6 +15,8 @@ const authRouter = express.Router();
  * サインイン
  * Cognitoからリダイレクトしてくる
  */
+// tslint:disable-next-line:no-single-line-block-comment
+/* istanbul ignore next */
 authRouter.get(
     '/signIn',
     async (req, res, next) => {
@@ -29,7 +31,6 @@ authRouter.get(
             });
 
             await user.signIn(req.query.code);
-            await user.isAuthenticated();
             await LINE.pushMessage(event.source.userId, `Signed in. ${user.payload.username}`);
 
             // イベントを強制的に再送信
@@ -39,7 +40,7 @@ authRouter.get(
                         'Content-Type': 'application/json'
                     },
                     form: body
-                });
+                }).promise();
             } catch (error) {
                 await LINE.pushMessage(event.source.userId, error.message);
             }
@@ -59,6 +60,47 @@ authRouter.get(
 </body>
 </html>`
             );
+        } catch (error) {
+            next(error);
+        }
+    });
+
+/**
+ * ログアウト
+ */
+// tslint:disable-next-line:no-single-line-block-comment
+/* istanbul ignore next */
+authRouter.get(
+    '/logout',
+    async (req, res, next) => {
+        try {
+            if (req.query.userId !== undefined) {
+                const user = new User({
+                    host: req.hostname,
+                    userId: req.query.userId,
+                    state: ''
+                });
+
+                // アプリケーション側でログアウト
+                await user.logout();
+                await LINE.pushMessage(user.userId, 'Logged out.');
+
+                // Cognitoからもログアウト
+                res.redirect(user.generateLogoutUrl());
+            } else {
+                const location = 'line://';
+
+                res.send(`
+<html>
+<body onload="location.href='line://'">
+<div style="text-align:center; font-size:400%">
+<h1>Logged out.</h1>
+<a href="${location}">Back to LINE.</a>
+</div>
+</body>
+</html>`
+                );
+            }
         } catch (error) {
             next(error);
         }

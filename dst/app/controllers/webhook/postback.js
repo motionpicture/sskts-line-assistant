@@ -23,11 +23,9 @@ const MESSAGE_TRANSACTION_NOT_FOUND = '該当取引はありません';
 /**
  * 予約番号で取引を検索する
  * @export
- * @function
- * @memberof app.controllers.webhook.postback
- * @param {string} userId LINEユーザーID
- * @param {string} reserveNum 予約番号
- * @param {string} theaterCode 劇場コード
+ * @param userId LINEユーザーID
+ * @param reserveNum 予約番号
+ * @param theaterCode 劇場コード
  */
 function searchTransactionByReserveNum(userId, reserveNum, theaterCode) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -54,11 +52,9 @@ exports.searchTransactionByReserveNum = searchTransactionByReserveNum;
 /**
  * 電話番号で取引を検索する
  * @export
- * @function
- * @memberof app.controllers.webhook.postback
- * @param {string} userId LINEユーザーID
- * @param {string} tel 電話番号
- * @param {string} theaterCode 劇場コード
+ * @param userId LINEユーザーID
+ * @param tel 電話番号
+ * @param theaterCode 劇場コード
  */
 function searchTransactionByTel(userId, tel, __) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -70,10 +66,8 @@ exports.searchTransactionByTel = searchTransactionByTel;
 /**
  * 取引IDから取引情報詳細を送信する
  * @export
- * @function
- * @memberof app.controllers.webhook.postback
- * @param {string} userId LINEユーザーID
- * @param {string} transactionId 取引ID
+ * @param userId LINEユーザーID
+ * @param transactionId 取引ID
  */
 // tslint:disable-next-line:cyclomatic-complexity max-func-body-length
 function pushTransactionDetails(userId, orderNumber) {
@@ -125,7 +119,6 @@ function pushTransactionDetails(userId, orderNumber) {
                     taskNameStr = 'メール送信';
                     break;
                 default:
-                    break;
             }
             return util.format('%s %s', (task.status === sskts.factory.taskStatus.Executed && task.lastTriedAt !== null)
                 ? moment(task.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')
@@ -219,8 +212,6 @@ ${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.
 /**
  * 取引を通知する
  * @export
- * @function
- * @memberof app.controllers.webhook.postback
  * @param userId LINEユーザーID
  * @param transactionId 取引ID
  */
@@ -255,8 +246,6 @@ exports.pushNotification = pushNotification;
 /**
  * 座席の本予約を実行する
  * @export
- * @function
- * @memberof app.controllers.webhook.postback
  * @param userId LINEユーザーID
  * @param transactionId 取引ID
  */
@@ -289,8 +278,6 @@ exports.settleSeatReservation = settleSeatReservation;
 /**
  * 所有権作成を実行する
  * @export
- * @function
- * @memberof app.controllers.webhook.postback
  * @param userId LINEユーザーID
  * @param transactionId 取引ID
  */
@@ -323,10 +310,8 @@ exports.createOwnershipInfos = createOwnershipInfos;
 /**
  * 取引検索(csvダウンロード)
  * @export
- * @function
- * @memberof app.controllers.webhook.postback
- * @param {string} userId
- * @param {string} date YYYY-MM-DD形式
+ * @param userId ユーザーID
+ * @param date YYYY-MM-DD形式
  */
 function searchTransactionsByDate(userId, date) {
     return __awaiter(this, void 0, void 0, function* () {

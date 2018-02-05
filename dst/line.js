@@ -1,7 +1,6 @@
 "use strict";
 /**
  * LINEモジュール
- * @namespace line
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -19,10 +18,8 @@ exports.URL_PUSH_MESSAGE = 'https://api.line.me/v2/bot/message/push';
 /**
  * メッセージ送信
  * @export
- * @function
- * @memberof app.controllers.line
- * @param {string} userId LINEユーザーID
- * @param {string} text メッセージ
+ * @param userId LINEユーザーID
+ * @param text メッセージ
  */
 function pushMessage(userId, text) {
     return __awaiter(this, void 0, void 0, function* () {

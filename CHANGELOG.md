@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
+- Cognito管理者ユーザーとの連携を調整。
+- ログアウト機能を追加。
 
 ### Deprecated
 

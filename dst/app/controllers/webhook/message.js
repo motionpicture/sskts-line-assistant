@@ -21,8 +21,6 @@ const debug = createDebug('sskts-line-assistant:controller:webhook:message');
 /**
  * 使い方を送信する
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 function pushHowToUse(userId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -49,8 +47,6 @@ exports.pushHowToUse = pushHowToUse;
 /**
  * 予約番号or電話番号のボタンを送信する
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 function pushButtonsReserveNumOrTel(userId, message) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -96,8 +92,6 @@ exports.pushButtonsReserveNumOrTel = pushButtonsReserveNumOrTel;
 /**
  * 日付選択を求める
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 function askFromWhenAndToWhen(userId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -127,15 +121,13 @@ function askFromWhenAndToWhen(userId) {
                     }
                 ]
             }
-        });
+        }).promise();
     });
 }
 exports.askFromWhenAndToWhen = askFromWhenAndToWhen;
 /**
  * 取引CSVダウンロードURIを発行する
  * @export
- * @function
- * @memberof app.controllers.webhook.message
  */
 function publishURI4transactionsCSV(userId, dateFrom, dateThrough) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -155,3 +147,34 @@ function publishURI4transactionsCSV(userId, dateFrom, dateThrough) {
     });
 }
 exports.publishURI4transactionsCSV = publishURI4transactionsCSV;
+function logout(user) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield request.post({
+            simple: false,
+            url: LINE.URL_PUSH_MESSAGE,
+            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+            json: true,
+            body: {
+                to: user.userId,
+                messages: [
+                    {
+                        type: 'template',
+                        altText: 'ログアウトボタン',
+                        template: {
+                            type: 'buttons',
+                            text: '本当にログアウトしますか？',
+                            actions: [
+                                {
+                                    type: 'uri',
+                                    label: 'Log out',
+                                    uri: `https://${user.host}/logout?userId=${user.userId}`
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }).promise();
+    });
+}
+exports.logout = logout;
