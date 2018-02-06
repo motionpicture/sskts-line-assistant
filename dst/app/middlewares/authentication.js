@@ -21,11 +21,6 @@ const LINE = require("../../line");
 const user_1 = require("../user");
 exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     try {
-        // ユーザー認証無効化の設定の場合
-        if (process.env.USER_AUTHENTICATION_DISABLED === '1') {
-            next();
-            return;
-        }
         const event = (req.body.events !== undefined) ? req.body.events[0] : undefined;
         if (event === undefined) {
             throw new Error('Invalid request.');
@@ -36,6 +31,15 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
             userId: userId,
             state: JSON.stringify(req.body)
         });
+        // ユーザー認証無効化の設定の場合
+        if (process.env.USER_AUTHENTICATION_DISABLED === '1') {
+            // ログイン状態をセットしてnext
+            // req.user.setCredentials({
+            //     access_token: ''
+            // });
+            next();
+            return;
+        }
         const credentials = yield req.user.getCredentials();
         if (credentials === null) {
             // ログインボタンを送信

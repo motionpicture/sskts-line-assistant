@@ -14,6 +14,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const createDebug = require("debug");
 const querystring = require("querystring");
+const request = require("request-promise-native");
 const LINE = require("../../line");
 const MessageController = require("./webhook/message");
 const PostbackController = require("./webhook/postback");
@@ -45,6 +46,21 @@ function message(event, user) {
                     yield MessageController.logout(user);
                     break;
                 default:
+                    // まず二段階認証フローかどうか確認
+                    const postEvent = yield user.verifyMFAPass(messageText);
+                    debug('postEvent from pass:', postEvent);
+                    if (postEvent !== null) {
+                        // postEventがあれば送信
+                        yield request.post(`https://${user.host}/webhook`, {
+                            // tslint:disable-next-line:no-http-string
+                            // await request.post('http://localhost:8080/webhook', {
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            form: postEvent
+                        }).promise();
+                        return;
+                    }
                     // 予約照会方法をアドバイス
                     yield MessageController.pushHowToUse(userId);
             }
@@ -60,7 +76,7 @@ exports.message = message;
 /**
  * イベントの送信元が、template messageに付加されたポストバックアクションを実行したことを示すevent objectです。
  */
-function postback(event, __) {
+function postback(event, user) {
     return __awaiter(this, void 0, void 0, function* () {
         const data = querystring.parse(event.postback.data);
         debug('data:', data);
@@ -84,6 +100,12 @@ function postback(event, __) {
                     break;
                 case 'searchTransactionsByDate':
                     yield PostbackController.searchTransactionsByDate(userId, event.postback.params.date);
+                    break;
+                case 'startReturnOrder':
+                    yield PostbackController.startReturnOrder(user, data.transaction);
+                    break;
+                case 'confirmReturnOrder':
+                    yield PostbackController.confirmReturnOrder(user, data.transaction, data.pass);
                     break;
                 default:
             }

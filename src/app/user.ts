@@ -5,6 +5,8 @@ import * as jwt from 'jsonwebtoken';
 
 const debug = createDebug('sskts-line-assistant:user');
 
+import * as LINE from '../line';
+
 const redisClient = new redis({
     host: <string>process.env.REDIS_HOST,
     // tslint:disable-next-line:no-magic-numbers
@@ -65,6 +67,8 @@ if (USER_EXPIRES_IN_SECONDS === undefined) {
 }
 // tslint:disable-next-line:no-magic-numbers
 const EXPIRES_IN_SECONDS = parseInt(USER_EXPIRES_IN_SECONDS, 10);
+const POST_EVENT_TOKEN_EXPIRES_IN_SECONDS = 60;
+const SECRET = 'secret';
 
 /**
  * LINEユーザー
@@ -143,5 +147,53 @@ export default class User {
 
     public async logout() {
         await redisClient.del(`token.${this.userId}`);
+    }
+
+    public async saveMFAPass(pass: string, postEvent: LINE.IWebhookEvent) {
+        return new Promise<string>((resolve, reject) => {
+            // JWT作成
+            const payload = { events: [postEvent] };
+            jwt.sign(payload, SECRET, { expiresIn: POST_EVENT_TOKEN_EXPIRES_IN_SECONDS }, async (jwtErr, token) => {
+                if (jwtErr instanceof Error) {
+                    reject(jwtErr);
+                } else {
+                    const key = `line-assistant.postEvent.${this.userId}.${pass}`;
+
+                    const results = await redisClient.multi()
+                        .set(key, token)
+                        .expire(key, POST_EVENT_TOKEN_EXPIRES_IN_SECONDS, debug)
+                        .exec();
+                    debug('results:', results);
+
+                    resolve(pass);
+                }
+            });
+        });
+    }
+
+    public async verifyMFAPass(pass: string) {
+        return new Promise<LINE.IWebhookEvent | null>(async (resolve, reject) => {
+            const key = `line-assistant.postEvent.${this.userId}.${pass}`;
+
+            const token = await redisClient.get(key);
+            if (token === null) {
+                resolve(null);
+
+                return;
+            }
+
+            jwt.verify(token, SECRET, (jwtErr, decoded: LINE.IWebhookEvent) => {
+                if (jwtErr instanceof Error) {
+                    reject(jwtErr);
+                } else {
+                    resolve(decoded);
+                }
+            });
+        });
+    }
+
+    public async deleteMFAPass(pass: string) {
+        const key = `line-assistant.postEvent.${this.userId}.${pass}`;
+        await redisClient.del(key);
     }
 }

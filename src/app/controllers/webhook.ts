@@ -5,6 +5,7 @@
 
 import * as createDebug from 'debug';
 import * as querystring from 'querystring';
+import * as request from 'request-promise-native';
 
 import * as LINE from '../../line';
 import User from '../user';
@@ -44,6 +45,23 @@ export async function message(event: LINE.IWebhookEvent, user: User) {
                 break;
 
             default:
+                // まず二段階認証フローかどうか確認
+                const postEvent = await user.verifyMFAPass(messageText);
+                debug('postEvent from pass:', postEvent);
+                if (postEvent !== null) {
+                    // postEventがあれば送信
+                    await request.post(`https://${user.host}/webhook`, {
+                        // tslint:disable-next-line:no-http-string
+                        // await request.post('http://localhost:8080/webhook', {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        form: postEvent
+                    }).promise();
+
+                    return;
+                }
+
                 // 予約照会方法をアドバイス
                 await MessageController.pushHowToUse(userId);
         }
@@ -57,7 +75,7 @@ export async function message(event: LINE.IWebhookEvent, user: User) {
 /**
  * イベントの送信元が、template messageに付加されたポストバックアクションを実行したことを示すevent objectです。
  */
-export async function postback(event: LINE.IWebhookEvent, __: User) {
+export async function postback(event: LINE.IWebhookEvent, user: User) {
     const data = querystring.parse(event.postback.data);
     debug('data:', data);
     const userId = event.source.userId;
@@ -86,6 +104,14 @@ export async function postback(event: LINE.IWebhookEvent, __: User) {
 
             case 'searchTransactionsByDate':
                 await PostbackController.searchTransactionsByDate(userId, <string>event.postback.params.date);
+                break;
+
+            case 'startReturnOrder':
+                await PostbackController.startReturnOrder(user, <string>data.transaction);
+                break;
+
+            case 'confirmReturnOrder':
+                await PostbackController.confirmReturnOrder(user, <string>data.transaction, <string>data.pass);
                 break;
 
             default:

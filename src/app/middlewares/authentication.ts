@@ -15,13 +15,6 @@ import User from '../user';
 
 export default async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // ユーザー認証無効化の設定の場合
-        if (process.env.USER_AUTHENTICATION_DISABLED === '1') {
-            next();
-
-            return;
-        }
-
         const event: LINE.IWebhookEvent | undefined = (req.body.events !== undefined) ? req.body.events[0] : undefined;
         if (event === undefined) {
             throw new Error('Invalid request.');
@@ -32,6 +25,19 @@ export default async (req: Request, res: Response, next: NextFunction) => {
             userId: userId,
             state: JSON.stringify(req.body)
         });
+
+        // ユーザー認証無効化の設定の場合
+        if (process.env.USER_AUTHENTICATION_DISABLED === '1') {
+            // ログイン状態をセットしてnext
+            // req.user.setCredentials({
+            //     access_token: ''
+            // });
+
+            next();
+
+            return;
+        }
+
         const credentials = await req.user.getCredentials();
         if (credentials === null) {
             // ログインボタンを送信

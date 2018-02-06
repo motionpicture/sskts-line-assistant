@@ -26,6 +26,8 @@ if (USER_EXPIRES_IN_SECONDS === undefined) {
 }
 // tslint:disable-next-line:no-magic-numbers
 const EXPIRES_IN_SECONDS = parseInt(USER_EXPIRES_IN_SECONDS, 10);
+const POST_EVENT_TOKEN_EXPIRES_IN_SECONDS = 60;
+const SECRET = 'secret';
 /**
  * LINEユーザー
  * @see https://aws.amazon.com/blogs/mobile/integrating-amazon-cognito-user-pools-with-api-gateway/
@@ -88,6 +90,54 @@ class User {
     logout() {
         return __awaiter(this, void 0, void 0, function* () {
             yield redisClient.del(`token.${this.userId}`);
+        });
+    }
+    saveMFAPass(pass, postEvent) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((resolve, reject) => {
+                // JWT作成
+                const payload = { events: [postEvent] };
+                jwt.sign(payload, SECRET, { expiresIn: POST_EVENT_TOKEN_EXPIRES_IN_SECONDS }, (jwtErr, token) => __awaiter(this, void 0, void 0, function* () {
+                    if (jwtErr instanceof Error) {
+                        reject(jwtErr);
+                    }
+                    else {
+                        const key = `line-assistant.postEvent.${this.userId}.${pass}`;
+                        const results = yield redisClient.multi()
+                            .set(key, token)
+                            .expire(key, POST_EVENT_TOKEN_EXPIRES_IN_SECONDS, debug)
+                            .exec();
+                        debug('results:', results);
+                        resolve(pass);
+                    }
+                }));
+            });
+        });
+    }
+    verifyMFAPass(pass) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+                const key = `line-assistant.postEvent.${this.userId}.${pass}`;
+                const token = yield redisClient.get(key);
+                if (token === null) {
+                    resolve(null);
+                    return;
+                }
+                jwt.verify(token, SECRET, (jwtErr, decoded) => {
+                    if (jwtErr instanceof Error) {
+                        reject(jwtErr);
+                    }
+                    else {
+                        resolve(decoded);
+                    }
+                });
+            }));
+        });
+    }
+    deleteMFAPass(pass) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const key = `line-assistant.postEvent.${this.userId}.${pass}`;
+            yield redisClient.del(key);
         });
     }
 }

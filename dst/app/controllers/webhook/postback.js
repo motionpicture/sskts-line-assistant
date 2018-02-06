@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
+const otplib = require("otplib");
 const request = require("request-promise-native");
 const util = require("util");
 const LINE = require("../../../line");
@@ -200,6 +201,11 @@ ${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.
                                     type: 'postback',
                                     label: '所有権作成',
                                     data: `action=createOwnershipInfos&transaction=${transaction.id}`
+                                },
+                                {
+                                    type: 'postback',
+                                    label: '返品する',
+                                    data: `action=startReturnOrder&transaction=${transaction.id}`
                                 }
                             ]
                         }
@@ -209,6 +215,80 @@ ${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.
         }).promise();
     });
 }
+/**
+ * 返品取引開始
+ */
+function startReturnOrder(user, transactionId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield LINE.pushMessage(user.userId, '返品取引を開始します...');
+        const authClient = user.authClient;
+        const returnOrderTransaction = yield authClient.fetch(`${process.env.API_ENDPOINT}/transactions/returnOrder/start`, {
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${user.accessToken}`
+            },
+            method: 'POST',
+            body: JSON.stringify({
+                // tslint:disable-next-line:no-magic-numbers
+                expires: moment().add(15, 'minutes').toDate(),
+                transactionId: transactionId
+            })
+        }, 
+        // tslint:disable-next-line:no-magic-numbers
+        [200]);
+        debug('return order transaction started.', returnOrderTransaction.id);
+        // 二段階認証のためのワンタイムトークンを保管
+        const secret = otplib.authenticator.generateSecret();
+        const pass = otplib.authenticator.generate(secret);
+        const postEvent = {
+            postback: {
+                data: `action=confirmReturnOrder&transaction=${returnOrderTransaction.id}&pass=${pass}`
+            },
+            // replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
+            source: {
+                type: 'user',
+                userId: user.userId
+            },
+            timestamp: 1487085535998,
+            type: 'postback'
+        };
+        yield user.saveMFAPass(pass, postEvent);
+        yield LINE.pushMessage(user.userId, '返品取引を開始しました。');
+        yield LINE.pushMessage(user.userId, '二段階認証を行います。送信されてくる文字列を入力してください。');
+        yield LINE.pushMessage(user.userId, pass);
+    });
+}
+exports.startReturnOrder = startReturnOrder;
+/**
+ * 返品取引確定
+ */
+function confirmReturnOrder(user, transactionId, pass) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield LINE.pushMessage(user.userId, '返品取引を受け付けようとしています...');
+        const postEvent = yield user.verifyMFAPass(pass);
+        if (postEvent === null) {
+            yield LINE.pushMessage(user.userId, 'パスの有効期限が切れました。');
+            return;
+        }
+        // パス削除
+        yield user.deleteMFAPass(pass);
+        const authClient = user.authClient;
+        const result = yield authClient.fetch(`${process.env.API_ENDPOINT}/transactions/returnOrder/${transactionId}/confirm`, {
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${user.accessToken}`
+            },
+            method: 'POST'
+        }, 
+        // tslint:disable-next-line:no-magic-numbers
+        [201]);
+        debug('return order transaction confirmed.', result);
+        yield LINE.pushMessage(user.userId, '返品取引を受け付けました。');
+    });
+}
+exports.confirmReturnOrder = confirmReturnOrder;
 /**
  * 取引を通知する
  * @export
