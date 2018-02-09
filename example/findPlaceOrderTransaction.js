@@ -7,8 +7,8 @@ request.post(
         body: {
             events: [
                 {
-                    message: {
-                        text: '999517'
+                    postback: {
+                        data: 'action=searchTransactionByReserveNum&reserveNum=341108=&theater=118'
                     },
                     replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
                     source: {
@@ -16,7 +16,7 @@ request.post(
                         userId: 'U28fba84b4008d60291fc861e2562b34f'
                     },
                     timestamp: 1487085535998,
-                    type: 'message'
+                    type: 'postback'
                 }
             ]
         }

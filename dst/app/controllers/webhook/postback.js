@@ -74,25 +74,31 @@ exports.searchTransactionByTel = searchTransactionByTel;
 function pushTransactionDetails(userId, orderNumber) {
     return __awaiter(this, void 0, void 0, function* () {
         yield LINE.pushMessage(userId, `${orderNumber}の取引詳細をまとめています...`);
+        const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
         const orderRepo = new sskts.repository.Order(sskts.mongoose.connection);
         const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
         const transactionAdapter = new sskts.repository.Transaction(sskts.mongoose.connection);
-        // 注文検索
-        const order = yield orderRepo.orderModel.findOne({
-            orderNumber: orderNumber
-        }).exec().then((doc) => {
-            return (doc === null) ? null : doc.toObject();
-        });
-        debug('order:', order);
         // 取引検索
         const transaction = yield transactionAdapter.transactionModel.findOne({
             'result.order.orderNumber': orderNumber,
             typeOf: sskts.factory.transactionType.PlaceOrder
         }).then((doc) => doc.toObject());
-        const report = sskts.service.transaction.placeOrder.transaction2report(transaction);
-        debug('report:', report);
         // 確定取引なので、結果はundefinedではない
         const transactionResult = transaction.result;
+        // 注文検索
+        let order = yield orderRepo.orderModel.findOne({
+            orderNumber: orderNumber
+        }).exec().then((doc) => {
+            return (doc === null) ? null : doc.toObject();
+        });
+        debug('order:', order);
+        if (order === null) {
+            order = transactionResult.order;
+            // await LINE.pushMessage(userId, 'Order not found.');
+            // return;
+        }
+        const report = sskts.service.transaction.placeOrder.transaction2report(transaction);
+        debug('report:', report);
         // 非同期タスク検索
         const tasks = yield taskAdapter.taskModel.find({
             'data.transactionId': transaction.id
@@ -105,10 +111,10 @@ function pushTransactionDetails(userId, orderNumber) {
                     taskNameStr = '本予約';
                     break;
                 case sskts.factory.taskName.SettleCreditCard:
-                    taskNameStr = '売上';
+                    taskNameStr = 'クレカ支払';
                     break;
                 case sskts.factory.taskName.SettleMvtk:
-                    taskNameStr = 'ムビ処理';
+                    taskNameStr = 'ムビ使用';
                     break;
                 case sskts.factory.taskName.CreateOrder:
                     taskNameStr = '注文作成';
@@ -119,11 +125,68 @@ function pushTransactionDetails(userId, orderNumber) {
                 case sskts.factory.taskName.SendEmailNotification:
                     taskNameStr = 'メール送信';
                     break;
+                case sskts.factory.taskName.SendOrder:
+                    taskNameStr = '注文配送';
+                    break;
                 default:
             }
             return util.format('%s %s', (task.status === sskts.factory.taskStatus.Executed && task.lastTriedAt !== null)
                 ? moment(task.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')
                 : '---------- --:--:--', taskNameStr);
+        }).join('\n');
+        // 注文に対するアクション検索
+        const actions = yield actionRepo.actionModel.find({
+            'object.orderNumber': orderNumber
+            // actionStatus: sskts.factory.actionStatusType.CompletedActionStatus
+        }).exec().then((docs) => docs.map((doc) => doc.toObject()));
+        debug('actions on order found.', actions);
+        // アクション履歴
+        const actionStrs = actions
+            .sort((a, b) => moment(a.endDate).unix() - moment(b.endDate).unix())
+            .map((action) => {
+            let actionName = '???';
+            switch (action.typeOf) {
+                case sskts.factory.actionType.ReturnAction:
+                    if (action.object.order !== undefined) {
+                        actionName = '返品';
+                    }
+                    else {
+                        actionName = '返金';
+                    }
+                    break;
+                case sskts.factory.actionType.OrderAction:
+                    actionName = '注文受付';
+                    break;
+                case sskts.factory.actionType.SendAction:
+                    if (action.object.typeOf === 'Order') {
+                        actionName = '配送';
+                    }
+                    else {
+                        actionName = `${action.typeOf} ${action.object.typeOf}`;
+                    }
+                    break;
+                case sskts.factory.actionType.PayAction:
+                    actionName = `支払(${action.object.paymentMethod.paymentMethod})`;
+                    break;
+                case sskts.factory.actionType.UseAction:
+                    actionName = `${action.object.typeOf}使用`;
+                    break;
+                default:
+            }
+            let statusStr = '→';
+            switch (action.actionStatus) {
+                case sskts.factory.actionStatusType.CanceledActionStatus:
+                    statusStr = '←';
+                    break;
+                case sskts.factory.actionStatusType.CompletedActionStatus:
+                    statusStr = '↓';
+                    break;
+                case sskts.factory.actionStatusType.FailedActionStatus:
+                    statusStr = '×';
+                    break;
+                default:
+            }
+            return util.format('%s\n%s %s', moment(action.endDate).format('YYYY-MM-DD HH:mm:ss'), statusStr, actionName);
         }).join('\n');
         // tslint:disable:max-line-length
         const transactionDetails = `--------------------
@@ -134,11 +197,18 @@ function pushTransactionDetails(userId, orderNumber) {
 予約番号: ${report.confirmationNumber}
 劇場: ${report.superEventLocation}
 --------------------
-注文取引状況
+取引状況
 --------------------
 ${moment(report.startDate).format('YYYY-MM-DD HH:mm:ss')} 開始
 ${moment(report.endDate).format('YYYY-MM-DD HH:mm:ss')} 成立
+--------------------
+取引タスク
+--------------------
 ${taskStrs}
+--------------------
+注文状況
+--------------------
+${actionStrs}
 --------------------
 購入者情報
 --------------------
@@ -172,6 +242,30 @@ ${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.
 `;
         yield LINE.pushMessage(userId, transactionDetails);
         // キュー実行のボタン表示
+        const postActions = [
+            {
+                type: 'postback',
+                label: 'メール送信',
+                data: `action=pushNotification&transaction=${transaction.id}`
+            },
+            {
+                type: 'postback',
+                label: '本予約',
+                data: `action=settleSeatReservation&transaction=${transaction.id}`
+            },
+            {
+                type: 'postback',
+                label: '所有権作成',
+                data: `action=createOwnershipInfos&transaction=${transaction.id}`
+            }
+        ];
+        if (order.orderStatus === sskts.factory.orderStatus.OrderDelivered) {
+            postActions.push({
+                type: 'postback',
+                label: '返品する',
+                data: `action=startReturnOrder&transaction=${transaction.id}`
+            });
+        }
         yield request.post({
             simple: false,
             url: 'https://api.line.me/v2/bot/message/push',
@@ -186,28 +280,7 @@ ${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.
                         template: {
                             type: 'buttons',
                             text: 'タスク実行',
-                            actions: [
-                                {
-                                    type: 'postback',
-                                    label: 'メール送信',
-                                    data: `action=pushNotification&transaction=${transaction.id}`
-                                },
-                                {
-                                    type: 'postback',
-                                    label: '本予約',
-                                    data: `action=settleSeatReservation&transaction=${transaction.id}`
-                                },
-                                {
-                                    type: 'postback',
-                                    label: '所有権作成',
-                                    data: `action=createOwnershipInfos&transaction=${transaction.id}`
-                                },
-                                {
-                                    type: 'postback',
-                                    label: '返品する',
-                                    data: `action=startReturnOrder&transaction=${transaction.id}`
-                                }
-                            ]
+                            actions: postActions
                         }
                     }
                 ]

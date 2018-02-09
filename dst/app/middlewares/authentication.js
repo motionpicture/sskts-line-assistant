@@ -32,11 +32,13 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
             state: JSON.stringify(req.body)
         });
         // ユーザー認証無効化の設定の場合
-        if (process.env.USER_AUTHENTICATION_DISABLED === '1') {
+        if (process.env.USER_REFRESH_TOKEN !== undefined) {
             // ログイン状態をセットしてnext
-            // req.user.setCredentials({
-            //     access_token: ''
-            // });
+            req.user.setCredentials({
+                access_token: '',
+                refresh_token: process.env.USER_REFRESH_TOKEN,
+                token_type: 'Bearer'
+            });
             next();
             return;
         }

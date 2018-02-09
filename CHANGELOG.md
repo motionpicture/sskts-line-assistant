@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Unreleased
 ### Added
 - 注文返品機能を追加。
+- 注文照会にアクション履歴情報を追加。
 
 ### Changed
 
