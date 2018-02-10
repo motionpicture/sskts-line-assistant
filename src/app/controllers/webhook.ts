@@ -23,8 +23,8 @@ export async function message(event: LINE.IWebhookEvent, user: User) {
 
     try {
         switch (true) {
-            // [劇場コード]-[予約番号 or 電話番号]で検索
-            case /^\d{3}-\d{1,12}$/.test(messageText):
+            // [劇場コード]-[予約番号 or 電話番号] or 取引IDで検索
+            case /^\d{3}-\d{1,12}|\w{24}$/.test(messageText):
                 await MessageController.pushButtonsReserveNumOrTel(userId, messageText);
                 break;
 
@@ -84,6 +84,10 @@ export async function postback(event: LINE.IWebhookEvent, user: User) {
         switch (data.action) {
             case 'searchTransactionByReserveNum':
                 await PostbackController.searchTransactionByReserveNum(userId, <string>data.reserveNum, <string>data.theater);
+                break;
+
+            case 'searchTransactionById':
+                await PostbackController.searchTransactionById(userId, <string>data.transaction);
                 break;
 
             case 'searchTransactionByTel':

@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 - 注文返品機能を追加。
 - 注文照会にアクション履歴情報を追加。
+- 取引IDによる照会機能を追加。期限入れの取引詳細も確認できるように調整。
 
 ### Changed
 

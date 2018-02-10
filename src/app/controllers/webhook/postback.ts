@@ -17,6 +17,34 @@ const debug = createDebug('sskts-line-assistant:controller:webhook:postback');
 const MESSAGE_TRANSACTION_NOT_FOUND = '該当取引はありません';
 
 /**
+ * IDで取引検索
+ */
+export async function searchTransactionById(userId: string, transactionId: string) {
+    debug(userId, transactionId);
+    await LINE.pushMessage(userId, '取引IDで検索しています...');
+
+    // 取引検索
+    const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
+    const transaction = await transactionRepo.findPlaceOrderById(transactionId);
+
+    switch (transaction.status) {
+        case sskts.factory.transactionStatusType.InProgress:
+            await LINE.pushMessage(userId, `注文取引[${transactionId}]は進行中です。`);
+            break;
+
+        case sskts.factory.transactionStatusType.Confirmed:
+            await pushTransactionDetails(userId, (<sskts.factory.transaction.placeOrder.IResult>transaction.result).order.orderNumber);
+            break;
+
+        case sskts.factory.transactionStatusType.Expired:
+            await pushExpiredTransactionDetails(userId, transactionId);
+            break;
+
+        default:
+    }
+}
+
+/**
  * 予約番号で取引を検索する
  * @export
  * @param userId LINEユーザーID
@@ -28,8 +56,8 @@ export async function searchTransactionByReserveNum(userId: string, reserveNum: 
     await LINE.pushMessage(userId, '予約番号で検索しています...');
 
     // 取引検索
-    const transactionAdapter = new sskts.repository.Transaction(sskts.mongoose.connection);
-    await transactionAdapter.transactionModel.findOne(
+    const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
+    await transactionRepo.transactionModel.findOne(
         {
             // tslint:disable-next-line:no-magic-numbers
             'result.order.orderInquiryKey.confirmationNumber': parseInt(reserveNum, 10),
@@ -70,11 +98,11 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
 
     const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
     const orderRepo = new sskts.repository.Order(sskts.mongoose.connection);
-    const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
-    const transactionAdapter = new sskts.repository.Transaction(sskts.mongoose.connection);
+    const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
+    const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
 
     // 取引検索
-    const transaction = <sskts.factory.transaction.placeOrder.ITransaction>await transactionAdapter.transactionModel.findOne({
+    const transaction = <sskts.factory.transaction.placeOrder.ITransaction>await transactionRepo.transactionModel.findOne({
         'result.order.orderNumber': orderNumber,
         typeOf: sskts.factory.transactionType.PlaceOrder
     }).then((doc: sskts.mongoose.Document) => doc.toObject());
@@ -98,7 +126,7 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     debug('report:', report);
 
     // 非同期タスク検索
-    const tasks = await taskAdapter.taskModel.find({
+    const tasks = await taskRepo.taskModel.find({
         'data.transactionId': transaction.id
     }).exec().then((docs) => docs.map((doc) => <sskts.factory.task.ITask>doc.toObject()));
 
@@ -208,6 +236,7 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     const transactionDetails = `--------------------
 注文取引概要
 --------------------
+${transaction.id}
 status: ${report.status}
 確認番号: ${report.confirmationNumber}
 --------------------
@@ -276,40 +305,192 @@ ${actionStrs}
     await LINE.pushMessage(userId, transactionDetails);
 
     // キュー実行のボタン表示
-    const postActions = [
-        {
+    const postActions = [];
+    if (order.orderStatus === sskts.factory.orderStatus.OrderDelivered) {
+        postActions.push({
             type: 'postback',
             label: 'メール送信',
             data: `action=pushNotification&transaction=${transaction.id}`
-        }
-    ];
-    if (order.orderStatus === sskts.factory.orderStatus.OrderDelivered) {
+        });
         postActions.push({
             type: 'postback',
             label: '返品する',
             data: `action=startReturnOrder&transaction=${transaction.id}`
         });
     }
-    await request.post({
-        simple: false,
-        url: 'https://api.line.me/v2/bot/message/push',
-        auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
-        json: true,
-        body: {
-            to: userId,
-            messages: [
-                {
-                    type: 'template',
-                    altText: 'aaa',
-                    template: {
-                        type: 'buttons',
-                        text: 'タスク実行',
-                        actions: postActions
+
+    if (postActions.length > 0) {
+        await request.post({
+            simple: false,
+            url: 'https://api.line.me/v2/bot/message/push',
+            auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+            json: true,
+            body: {
+                to: userId,
+                messages: [
+                    {
+                        type: 'template',
+                        altText: 'aaa',
+                        template: {
+                            type: 'buttons',
+                            text: '以下アクションを実行できます。',
+                            actions: postActions
+                        }
                     }
-                }
-            ]
+                ]
+            }
+        }).promise();
+    }
+}
+
+/**
+ * 期限切れの取引詳細を報告する
+ */
+// tslint:disable-next-line:cyclomatic-complexity max-func-body-length
+async function pushExpiredTransactionDetails(userId: string, transactionId: string) {
+    await LINE.pushMessage(userId, `${transactionId}の取引詳細をまとめています...`);
+
+    const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
+    const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
+    const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
+
+    // 取引検索
+    const transaction = await transactionRepo.findPlaceOrderById(transactionId);
+    const report = sskts.service.transaction.placeOrder.transaction2report(transaction);
+    debug('report:', report);
+
+    // 非同期タスク検索
+    const tasks = await taskRepo.taskModel.find({
+        'data.transactionId': transaction.id
+    }).exec().then((docs) => docs.map((doc) => <sskts.factory.task.ITask>doc.toObject()));
+
+    // タスクの実行日時を調べる
+    const taskStrs = tasks.map((task) => {
+        let taskNameStr = '???';
+        switch (task.name) {
+            case sskts.factory.taskName.CancelCreditCard:
+                taskNameStr = 'クレカ取消';
+                break;
+            case sskts.factory.taskName.CancelMvtk:
+                taskNameStr = 'ムビ取消';
+                break;
+            case sskts.factory.taskName.CancelSeatReservation:
+                taskNameStr = '仮予約取消';
+                break;
+            default:
         }
-    }).promise();
+
+        return util.format(
+            '%s %s',
+            (task.status === sskts.factory.taskStatus.Executed && task.lastTriedAt !== null)
+                ? moment(task.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')
+                : '---------- --:--:--',
+            taskNameStr
+        );
+    }).join('\n');
+
+    // 承認アクション検索
+    const actions = await actionRepo.actionModel.find(
+        {
+            typeOf: sskts.factory.actionType.AuthorizeAction,
+            'object.transactionId': transaction.id
+        }
+    ).exec().then((docs) => docs.map((doc) => doc.toObject()));
+    debug('actions:', actions);
+
+    // アクション履歴
+    const actionStrs = actions
+        .sort((a, b) => moment(a.endDate).unix() - moment(b.endDate).unix())
+        .map((action) => {
+            let actionName = action.purpose.typeOf;
+            let description = '';
+            switch (action.purpose.typeOf) {
+                case sskts.factory.action.authorize.authorizeActionPurpose.CreditCard:
+                    actionName = 'クレカオーソリ';
+                    description = action.object.orderId;
+                    break;
+                case sskts.factory.action.authorize.authorizeActionPurpose.SeatReservation:
+                    actionName = '座席仮予約';
+                    if (action.result !== undefined) {
+                        description = action.result.updTmpReserveSeatResult.tmpReserveNum;
+                    }
+                    break;
+                case sskts.factory.action.authorize.authorizeActionPurpose.Mvtk:
+                    actionName = 'ムビチケ承認';
+                    if (action.result !== undefined) {
+                        description = (<sskts.factory.action.authorize.mvtk.IAction>action).object.seatInfoSyncIn.knyknrNoInfo.map((i) => i.knyknrNo).join(',');
+                    }
+                    break;
+                default:
+            }
+
+            let statusStr = '→';
+            switch (action.actionStatus) {
+                case sskts.factory.actionStatusType.CanceledActionStatus:
+                    statusStr = '←';
+                    break;
+                case sskts.factory.actionStatusType.CompletedActionStatus:
+                    statusStr = '↓';
+                    break;
+                case sskts.factory.actionStatusType.FailedActionStatus:
+                    statusStr = '×';
+                    break;
+
+                default:
+            }
+
+            return util.format(
+                '%s\n%s %s\n%s %s',
+                moment(action.endDate).format('YYYY-MM-DD HH:mm:ss'),
+                statusStr,
+                actionName,
+                statusStr,
+                description
+            );
+        }).join('\n');
+
+    // tslint:disable:max-line-length
+    const transactionDetails = `--------------------
+注文取引概要
+--------------------
+${transaction.id}
+status: ${report.status}
+--------------------
+取引進行クライアント
+--------------------
+${transaction.object.clientUser.client_id}
+${transaction.object.clientUser.iss}
+--------------------
+取引状況
+--------------------
+${moment(report.startDate).format('YYYY-MM-DD HH:mm:ss')} 開始
+${moment(report.endDate).format('YYYY-MM-DD HH:mm:ss')} 期限切れ
+--------------------
+承認アクション履歴
+--------------------
+${actionStrs}
+--------------------
+取引タスク
+--------------------
+${taskStrs}
+--------------------
+販売者情報
+--------------------
+${transaction.seller.typeOf}
+${transaction.seller.id}
+${transaction.seller.name}
+${transaction.seller.url}
+--------------------
+購入者情報
+--------------------
+${report.customer.name}
+${report.customer.telephone}
+${report.customer.email}
+${(report.customer.memberOf !== undefined) ? `${report.customer.memberOf.membershipNumber}` : '非会員'}
+`
+        ;
+
+    await LINE.pushMessage(userId, transactionDetails);
 }
 
 /**
@@ -405,10 +586,10 @@ export async function confirmReturnOrder(user: User, transactionId: string, pass
 export async function pushNotification(userId: string, transactionId: string) {
     await LINE.pushMessage(userId, '送信中...');
 
-    const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
+    const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
 
     // タスク検索
-    const tasks = await taskAdapter.taskModel.find({
+    const tasks = await taskRepo.taskModel.find({
         name: sskts.factory.taskName.SendEmailNotification,
         'data.transactionId': transactionId
     }).exec();
@@ -421,7 +602,7 @@ export async function pushNotification(userId: string, transactionId: string) {
 
     let promises: Promise<void>[] = [];
     promises = promises.concat(tasks.map(async (task) => {
-        await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, sskts.mongoose.connection);
+        await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskRepo, sskts.mongoose.connection);
     }));
 
     try {
@@ -444,10 +625,10 @@ export async function pushNotification(userId: string, transactionId: string) {
 export async function settleSeatReservation(userId: string, transactionId: string) {
     await LINE.pushMessage(userId, '本予約中...');
 
-    const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
+    const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
 
     // タスク検索
-    const tasks = await taskAdapter.taskModel.find({
+    const tasks = await taskRepo.taskModel.find({
         name: sskts.factory.taskName.SettleSeatReservation,
         'data.transactionId': transactionId
     }).exec();
@@ -460,7 +641,7 @@ export async function settleSeatReservation(userId: string, transactionId: strin
 
     try {
         await Promise.all(tasks.map(async (task) => {
-            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, sskts.mongoose.connection);
+            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskRepo, sskts.mongoose.connection);
         }));
     } catch (error) {
         await LINE.pushMessage(userId, `本予約失敗:${error.message}`);
@@ -480,10 +661,10 @@ export async function settleSeatReservation(userId: string, transactionId: strin
 export async function createOwnershipInfos(userId: string, transactionId: string) {
     await LINE.pushMessage(userId, '所有権作成中...');
 
-    const taskAdapter = new sskts.repository.Task(sskts.mongoose.connection);
+    const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
 
     // タスク検索
-    const tasks = await taskAdapter.taskModel.find({
+    const tasks = await taskRepo.taskModel.find({
         name: sskts.factory.taskName.CreateOwnershipInfos,
         'data.transactionId': transactionId
     }).exec();
@@ -496,7 +677,7 @@ export async function createOwnershipInfos(userId: string, transactionId: string
 
     try {
         await Promise.all(tasks.map(async (task) => {
-            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskAdapter, sskts.mongoose.connection);
+            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskRepo, sskts.mongoose.connection);
         }));
     } catch (error) {
         await LINE.pushMessage(userId, `所有権作成失敗:${error.message}`);
