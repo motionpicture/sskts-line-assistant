@@ -90,19 +90,17 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     });
     debug('order:', order);
     if (order === null) {
+        // 注文未作成であれば取引データから取得
         order = transactionResult.order;
-        // await LINE.pushMessage(userId, 'Order not found.');
-
-        // return;
     }
 
     const report = sskts.service.transaction.placeOrder.transaction2report(transaction);
     debug('report:', report);
 
     // 非同期タスク検索
-    const tasks = <sskts.factory.task.ITask[]>await taskAdapter.taskModel.find({
+    const tasks = await taskAdapter.taskModel.find({
         'data.transactionId': transaction.id
-    }).exec().then((docs) => docs.map((doc) => doc.toObject()));
+    }).exec().then((docs) => docs.map((doc) => <sskts.factory.task.ITask>doc.toObject()));
 
     // タスクの実行日時を調べる
     const taskStrs = tasks.map((task) => {
@@ -142,25 +140,27 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     }).join('\n');
 
     // 注文に対するアクション検索
-    const actions = await actionRepo.actionModel.find({
-        'object.orderNumber': orderNumber
-        // actionStatus: sskts.factory.actionStatusType.CompletedActionStatus
-    }).exec().then((docs) => docs.map((doc) => doc.toObject()));
+    const actions = await actionRepo.actionModel.find(
+        {
+            $or: [
+                { 'object.orderNumber': orderNumber },
+                { 'purpose.orderNumber': orderNumber }
+            ]
+        }
+    ).exec().then((docs) => docs.map((doc) => doc.toObject()));
     debug('actions on order found.', actions);
 
     // アクション履歴
     const actionStrs = actions
-        // .filter((a) => a.actionStatus === sskts.factory.actionStatusType.CompletedActionStatus)
         .sort((a, b) => moment(a.endDate).unix() - moment(b.endDate).unix())
         .map((action) => {
-            let actionName = '???';
+            let actionName = action.typeOf;
             switch (action.typeOf) {
                 case sskts.factory.actionType.ReturnAction:
-                    if (action.object.order !== undefined) {
-                        actionName = '返品';
-                    } else {
-                        actionName = '返金';
-                    }
+                    actionName = '返品';
+                    break;
+                case sskts.factory.actionType.RefundAction:
+                    actionName = '返金';
                     break;
                 case sskts.factory.actionType.OrderAction:
                     actionName = '注文受付';
@@ -208,10 +208,13 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     const transactionDetails = `--------------------
 注文取引概要
 --------------------
-取引ステータス: ${report.status}
-注文ステータス: ${(order !== null) ? order.orderStatus : ''}
-予約番号: ${report.confirmationNumber}
-劇場: ${report.superEventLocation}
+status: ${report.status}
+確認番号: ${report.confirmationNumber}
+--------------------
+取引進行クライアント
+--------------------
+${transaction.object.clientUser.client_id}
+${transaction.object.clientUser.iss}
 --------------------
 取引状況
 --------------------
@@ -222,16 +225,19 @@ ${moment(report.endDate).format('YYYY-MM-DD HH:mm:ss')} 成立
 --------------------
 ${taskStrs}
 --------------------
-注文状況
+販売者情報
 --------------------
-${actionStrs}
+${transaction.seller.typeOf}
+${transaction.seller.id}
+${transaction.seller.name}
+${transaction.seller.url}
 --------------------
 購入者情報
 --------------------
 ${report.customer.name}
 ${report.customer.telephone}
 ${report.customer.email}
-${(report.customer.memberOf !== undefined) ? `${report.customer.memberOf.membershipNumber}` : ''}
+${(report.customer.memberOf !== undefined) ? `${report.customer.memberOf.membershipNumber}` : '非会員'}
 --------------------
 座席予約
 --------------------
@@ -252,9 +258,18 @@ ${report.discounts}
 ${report.discountCodes}
 ￥${report.discountPrices}
 --------------------
-QR
+チケットトークン
 --------------------
 ${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.reservedTicket.ticketedSeat.seatNumber} ${offer.itemOffered.reservedTicket.ticketToken}`).join('\n')}
+--------------------
+注文状態
+--------------------
+${(order !== null) ? order.orderNumber : ''}
+${(order !== null) ? order.orderStatus : ''}
+--------------------
+注文状況
+--------------------
+${actionStrs}
 `
         ;
 
@@ -266,16 +281,6 @@ ${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.
             type: 'postback',
             label: 'メール送信',
             data: `action=pushNotification&transaction=${transaction.id}`
-        },
-        {
-            type: 'postback',
-            label: '本予約',
-            data: `action=settleSeatReservation&transaction=${transaction.id}`
-        },
-        {
-            type: 'postback',
-            label: '所有権作成',
-            data: `action=createOwnershipInfos&transaction=${transaction.id}`
         }
     ];
     if (order.orderStatus === sskts.factory.orderStatus.OrderDelivered) {
