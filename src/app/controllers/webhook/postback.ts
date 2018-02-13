@@ -158,11 +158,27 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
             default:
         }
 
+        let statusStr = '→';
+        switch (task.status) {
+            case sskts.factory.taskStatus.Ready:
+                statusStr = '-';
+                break;
+            case sskts.factory.taskStatus.Executed:
+                statusStr = '↓';
+                break;
+            case sskts.factory.taskStatus.Aborted:
+                statusStr = '×';
+                break;
+
+            default:
+        }
+
         return util.format(
-            '%s %s',
+            '%s\n%s %s',
             (task.status === sskts.factory.taskStatus.Executed && task.lastTriedAt !== null)
                 ? moment(task.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')
                 : '---------- --:--:--',
+            statusStr,
             taskNameStr
         );
     }).join('\n');
@@ -196,6 +212,8 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
                 case sskts.factory.actionType.SendAction:
                     if (action.object.typeOf === 'Order') {
                         actionName = '配送';
+                    } else if (action.object.typeOf === 'EmailMessage') {
+                        actionName = 'Eメール送信';
                     } else {
                         actionName = `${action.typeOf} ${action.object.typeOf}`;
                     }
@@ -234,11 +252,25 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
 
     // tslint:disable:max-line-length
     const transactionDetails = `--------------------
-注文取引概要
+注文状態
+--------------------
+${order.orderNumber}
+${order.orderStatus}
+--------------------
+注文照会キー
+--------------------
+${order.orderInquiryKey.confirmationNumber}
+${order.orderInquiryKey.telephone}
+${order.orderInquiryKey.theaterCode}
+--------------------
+注文処理履歴
+--------------------
+${actionStrs}
+--------------------
+注文取引
 --------------------
 ${transaction.id}
-status: ${report.status}
-確認番号: ${report.confirmationNumber}
+${report.status}
 --------------------
 取引進行クライアント
 --------------------
@@ -250,7 +282,7 @@ ${transaction.object.clientUser.iss}
 ${moment(report.startDate).format('YYYY-MM-DD HH:mm:ss')} 開始
 ${moment(report.endDate).format('YYYY-MM-DD HH:mm:ss')} 成立
 --------------------
-取引タスク
+取引処理履歴
 --------------------
 ${taskStrs}
 --------------------
@@ -277,28 +309,19 @@ ${report.reservedTickets}
 --------------------
 決済方法
 --------------------
-${report.paymentMethod}
-${report.paymentMethodId}
+${report.paymentMethod[0]}
+${report.paymentMethodId[0]}
 ${report.price}
 --------------------
 割引
 --------------------
-${report.discounts}
-${report.discountCodes}
-￥${report.discountPrices}
+${(report.discounts[0] !== undefined) ? report.discounts[0] : ''}
+${(report.discountCodes[0] !== undefined) ? report.discountCodes[0] : ''}
+￥${(report.discountPrices[0] !== undefined) ? report.discountPrices[0] : ''}
 --------------------
 チケットトークン
 --------------------
 ${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.reservedTicket.ticketedSeat.seatNumber} ${offer.itemOffered.reservedTicket.ticketToken}`).join('\n')}
---------------------
-注文状態
---------------------
-${(order !== null) ? order.orderNumber : ''}
-${(order !== null) ? order.orderStatus : ''}
---------------------
-注文状況
---------------------
-${actionStrs}
 `
         ;
 

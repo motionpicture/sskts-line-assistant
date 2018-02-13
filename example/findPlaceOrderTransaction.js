@@ -8,7 +8,7 @@ request.post(
             events: [
                 {
                     postback: {
-                        data: 'action=searchTransactionByReserveNum&reserveNum=263821=&theater=112'
+                        data: 'action=searchTransactionByReserveNum&reserveNum=346168=&theater=118'
                     },
                     replyToken: '26d0dd0923a94583871ecd7e6efec8e2',
                     source: {
