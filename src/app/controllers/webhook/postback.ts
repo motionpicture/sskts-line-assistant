@@ -3,6 +3,7 @@
  * @namespace app.controllers.webhook.postback
  */
 
+import * as ssktsapi from '@motionpicture/sskts-api-nodejs-client';
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
@@ -100,6 +101,7 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     const orderRepo = new sskts.repository.Order(sskts.mongoose.connection);
     const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
     const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
+    const ownershipInfo = new sskts.repository.OwnershipInfo(sskts.mongoose.connection);
 
     // 取引検索
     const transaction = <sskts.factory.transaction.placeOrder.ITransaction>await transactionRepo.transactionModel.findOne({
@@ -121,6 +123,26 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
         // 注文未作成であれば取引データから取得
         order = transactionResult.order;
     }
+
+    // 所有権検索
+    type IReservation = ssktsapi.factory.reservation.event.IEventReservation<ssktsapi.factory.event.individualScreeningEvent.IEvent>;
+    const ownershipInfos = await ownershipInfo.ownershipInfoModel.find({
+        identifier: { $in: transactionResult.ownershipInfos.map((o) => o.identifier) }
+    }).exec().then((docs) => docs.map((doc) => <ssktsapi.factory.ownershipInfo.IOwnershipInfo<IReservation>>doc.toObject()));
+    debug(ownershipInfos.length, 'ownershipInfos found.');
+
+    const ownershipInfosStr = ownershipInfos.map(
+        (i) => {
+            return util.format(
+                '💲%s\n%s %s\n@%s\n~%s',
+                i.identifier,
+                i.typeOfGood.reservedTicket.ticketedSeat.seatNumber,
+                i.typeOfGood.reservedTicket.coaTicketInfo.ticketName,
+                i.typeOfGood.reservationStatus,
+                moment(i.ownedThrough).format('YYYY-MM-DD HH:mm:ss')
+            );
+        }
+    ).join('\n');
 
     const report = sskts.service.transaction.placeOrder.transaction2report(transaction);
     debug('report:', report);
@@ -251,77 +273,78 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
         }).join('\n');
 
     // tslint:disable:max-line-length
-    const transactionDetails = `--------------------
+    const transactionDetails = `----------------------------
 注文状態
---------------------
+----------------------------
 ${order.orderNumber}
 ${order.orderStatus}
---------------------
+----------------------------
 注文照会キー
---------------------
+----------------------------
 ${order.orderInquiryKey.confirmationNumber}
 ${order.orderInquiryKey.telephone}
 ${order.orderInquiryKey.theaterCode}
---------------------
+----------------------------
 注文処理履歴
---------------------
+----------------------------
 ${actionStrs}
---------------------
+----------------------------
+注文アイテム状態
+----------------------------
+${ownershipInfosStr}
+
+----------------------------
 注文取引
---------------------
+----------------------------
 ${transaction.id}
 ${report.status}
---------------------
+----------------------------
 取引進行クライアント
---------------------
+----------------------------
 ${transaction.object.clientUser.client_id}
 ${transaction.object.clientUser.iss}
---------------------
+----------------------------
 取引状況
---------------------
+----------------------------
 ${moment(report.startDate).format('YYYY-MM-DD HH:mm:ss')} 開始
 ${moment(report.endDate).format('YYYY-MM-DD HH:mm:ss')} 成立
---------------------
+----------------------------
 取引処理履歴
---------------------
+----------------------------
 ${taskStrs}
---------------------
+----------------------------
 販売者情報
---------------------
+----------------------------
 ${transaction.seller.typeOf}
 ${transaction.seller.id}
 ${transaction.seller.name}
 ${transaction.seller.url}
---------------------
+----------------------------
 購入者情報
---------------------
+----------------------------
 ${report.customer.name}
 ${report.customer.telephone}
 ${report.customer.email}
 ${(report.customer.memberOf !== undefined) ? `${report.customer.memberOf.membershipNumber}` : '非会員'}
---------------------
+----------------------------
 座席予約
---------------------
+----------------------------
 ${report.eventName}
 ${moment(report.eventStartDate).format('YYYY-MM-DD HH:mm')}-${moment(report.eventEndDate).format('HH:mm')}
 @${report.superEventLocation} ${report.eventLocation}
 ${report.reservedTickets}
---------------------
+----------------------------
 決済方法
---------------------
+----------------------------
 ${report.paymentMethod[0]}
 ${report.paymentMethodId[0]}
 ${report.price}
---------------------
+----------------------------
 割引
---------------------
+----------------------------
 ${(report.discounts[0] !== undefined) ? report.discounts[0] : ''}
 ${(report.discountCodes[0] !== undefined) ? report.discountCodes[0] : ''}
 ￥${(report.discountPrices[0] !== undefined) ? report.discountPrices[0] : ''}
---------------------
-チケットトークン
---------------------
-${transactionResult.order.acceptedOffers.map((offer) => `●${offer.itemOffered.reservedTicket.ticketedSeat.seatNumber} ${offer.itemOffered.reservedTicket.ticketToken}`).join('\n')}
 `
         ;
 
@@ -403,11 +426,27 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
             default:
         }
 
+        let statusStr = '→';
+        switch (task.status) {
+            case sskts.factory.taskStatus.Ready:
+                statusStr = '-';
+                break;
+            case sskts.factory.taskStatus.Executed:
+                statusStr = '↓';
+                break;
+            case sskts.factory.taskStatus.Aborted:
+                statusStr = '×';
+                break;
+
+            default:
+        }
+
         return util.format(
-            '%s %s',
+            '%s\n%s %s',
             (task.status === sskts.factory.taskStatus.Executed && task.lastTriedAt !== null)
                 ? moment(task.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')
                 : '---------- --:--:--',
+            statusStr,
             taskNameStr
         );
     }).join('\n');
@@ -473,39 +512,39 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
         }).join('\n');
 
     // tslint:disable:max-line-length
-    const transactionDetails = `--------------------
+    const transactionDetails = `----------------------------
 注文取引概要
---------------------
+----------------------------
 ${transaction.id}
-status: ${report.status}
---------------------
+${report.status}
+----------------------------
 取引進行クライアント
---------------------
+----------------------------
 ${transaction.object.clientUser.client_id}
 ${transaction.object.clientUser.iss}
---------------------
+----------------------------
 取引状況
---------------------
+----------------------------
 ${moment(report.startDate).format('YYYY-MM-DD HH:mm:ss')} 開始
 ${moment(report.endDate).format('YYYY-MM-DD HH:mm:ss')} 期限切れ
---------------------
+----------------------------
 承認アクション履歴
---------------------
+----------------------------
 ${actionStrs}
---------------------
-取引タスク
---------------------
+----------------------------
+取引処理履歴
+----------------------------
 ${taskStrs}
---------------------
+----------------------------
 販売者情報
---------------------
+----------------------------
 ${transaction.seller.typeOf}
 ${transaction.seller.id}
 ${transaction.seller.name}
 ${transaction.seller.url}
---------------------
+----------------------------
 購入者情報
---------------------
+----------------------------
 ${report.customer.name}
 ${report.customer.telephone}
 ${report.customer.email}
@@ -521,26 +560,20 @@ ${(report.customer.memberOf !== undefined) ? `${report.customer.memberOf.members
  */
 export async function startReturnOrder(user: User, transactionId: string) {
     await LINE.pushMessage(user.userId, '返品取引を開始します...');
+    const API_ENDPOINT = process.env.API_ENDPOINT;
+    if (API_ENDPOINT === undefined) {
+        throw new Error('process.env.API_ENDPOINT undefined.');
+    }
 
-    const authClient = user.authClient;
-    const returnOrderTransaction = await authClient.fetch(
-        `${<string>process.env.API_ENDPOINT}/transactions/returnOrder/start`,
-        {
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${user.accessToken}`
-            },
-            method: 'POST',
-            body: JSON.stringify({
-                // tslint:disable-next-line:no-magic-numbers
-                expires: moment().add(15, 'minutes').toDate(),
-                transactionId: transactionId
-            })
-        },
+    const returnOrderService = new ssktsapi.service.transaction.ReturnOrder({
+        endpoint: API_ENDPOINT,
+        auth: user.authClient
+    });
+    const returnOrderTransaction = await returnOrderService.start({
         // tslint:disable-next-line:no-magic-numbers
-        [200]
-    );
+        expires: moment().add(15, 'minutes').toDate(),
+        transactionId: transactionId
+    });
     debug('return order transaction started.', returnOrderTransaction.id);
 
     // 二段階認証のためのワンタイムトークンを保管
@@ -581,20 +614,17 @@ export async function confirmReturnOrder(user: User, transactionId: string, pass
     // パス削除
     await user.deleteMFAPass(pass);
 
-    const authClient = user.authClient;
-    const result = await authClient.fetch(
-        `${<string>process.env.API_ENDPOINT}/transactions/returnOrder/${transactionId}/confirm`,
-        {
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${user.accessToken}`
-            },
-            method: 'POST'
-        },
-        // tslint:disable-next-line:no-magic-numbers
-        [201]
-    );
+    const API_ENDPOINT = process.env.API_ENDPOINT;
+    if (API_ENDPOINT === undefined) {
+        throw new Error('process.env.API_ENDPOINT undefined.');
+    }
+    const returnOrderService = new ssktsapi.service.transaction.ReturnOrder({
+        endpoint: API_ENDPOINT,
+        auth: user.authClient
+    });
+    const result = await returnOrderService.confirm({
+        transactionId: transactionId
+    });
     debug('return order transaction confirmed.', result);
 
     await LINE.pushMessage(user.userId, '返品取引を受け付けました。');
