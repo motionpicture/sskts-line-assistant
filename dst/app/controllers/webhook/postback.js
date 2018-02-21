@@ -140,22 +140,16 @@ function pushTransactionDetails(userId, orderNumber) {
         const taskStrs = tasks.map((task) => {
             let taskNameStr = '???';
             switch (task.name) {
-                case sskts.factory.taskName.SettleSeatReservation:
-                    taskNameStr = '本予約';
-                    break;
-                case sskts.factory.taskName.SettleCreditCard:
+                case sskts.factory.taskName.PayCreditCard:
                     taskNameStr = 'クレカ支払';
                     break;
-                case sskts.factory.taskName.SettleMvtk:
+                case sskts.factory.taskName.UseMvtk:
                     taskNameStr = 'ムビ使用';
                     break;
-                case sskts.factory.taskName.CreateOrder:
+                case sskts.factory.taskName.PlaceOrder:
                     taskNameStr = '注文作成';
                     break;
-                case sskts.factory.taskName.CreateOwnershipInfos:
-                    taskNameStr = '所有権作成';
-                    break;
-                case sskts.factory.taskName.SendEmailNotification:
+                case sskts.factory.taskName.SendEmailMessage:
                     taskNameStr = 'メール送信';
                     break;
                 case sskts.factory.taskName.SendOrder:
@@ -571,7 +565,7 @@ function pushNotification(userId, transactionId) {
         const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
         // タスク検索
         const tasks = yield taskRepo.taskModel.find({
-            name: sskts.factory.taskName.SendEmailNotification,
+            name: sskts.factory.taskName.SendEmailMessage,
             'data.transactionId': transactionId
         }).exec();
         if (tasks.length === 0) {
@@ -593,70 +587,6 @@ function pushNotification(userId, transactionId) {
     });
 }
 exports.pushNotification = pushNotification;
-/**
- * 座席の本予約を実行する
- * @export
- * @param userId LINEユーザーID
- * @param transactionId 取引ID
- */
-function settleSeatReservation(userId, transactionId) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield LINE.pushMessage(userId, '本予約中...');
-        const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
-        // タスク検索
-        const tasks = yield taskRepo.taskModel.find({
-            name: sskts.factory.taskName.SettleSeatReservation,
-            'data.transactionId': transactionId
-        }).exec();
-        if (tasks.length === 0) {
-            yield LINE.pushMessage(userId, 'Task not found.');
-            return;
-        }
-        try {
-            yield Promise.all(tasks.map((task) => __awaiter(this, void 0, void 0, function* () {
-                yield sskts.service.task.execute(task.toObject())(taskRepo, sskts.mongoose.connection);
-            })));
-        }
-        catch (error) {
-            yield LINE.pushMessage(userId, `本予約失敗:${error.message}`);
-            return;
-        }
-        yield LINE.pushMessage(userId, '本予約完了');
-    });
-}
-exports.settleSeatReservation = settleSeatReservation;
-/**
- * 所有権作成を実行する
- * @export
- * @param userId LINEユーザーID
- * @param transactionId 取引ID
- */
-function createOwnershipInfos(userId, transactionId) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield LINE.pushMessage(userId, '所有権作成中...');
-        const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
-        // タスク検索
-        const tasks = yield taskRepo.taskModel.find({
-            name: sskts.factory.taskName.CreateOwnershipInfos,
-            'data.transactionId': transactionId
-        }).exec();
-        if (tasks.length === 0) {
-            yield LINE.pushMessage(userId, 'Task not found.');
-            return;
-        }
-        try {
-            yield Promise.all(tasks.map((task) => __awaiter(this, void 0, void 0, function* () {
-                yield sskts.service.task.execute(task.toObject())(taskRepo, sskts.mongoose.connection);
-            })));
-        }
-        catch (error) {
-            yield LINE.pushMessage(userId, `所有権作成失敗:${error.message}`);
-            return;
-        }
-        yield LINE.pushMessage(userId, '所有権作成完了');
-    });
-}
-exports.createOwnershipInfos = createOwnershipInfos;
 /**
  * 取引検索(csvダウンロード)
  * @export
