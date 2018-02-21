@@ -21,13 +21,21 @@ export async function pushHowToUse(userId: string) {
     // tslint:disable-next-line:no-multiline-string
     const text = `How to use
 ******** new! ********
+取引IDで検索できるようになりました。
+期限切れステータスの取引詳細を照会することができるようになりました。確定していない取引の仮予約情報、クレジットカードオーソリ情報を確認することができます。
 ログアウトできるようになりました。
 ******** new! ********
 --------------------
-取引照会
+予約番号で取引照会
 --------------------
-[劇場コード]-[予約番号 or 電話番号]と入力
+[劇場コード]-[予約番号]と入力
 例:118-2425
+
+--------------------
+取引IDで取引照会
+--------------------
+[ID]と入力
+例:5a7b2ed6c993250364388acd
 
 --------------------
 取引CSVダウンロード
@@ -68,6 +76,11 @@ export async function pushButtonsReserveNumOrTel(userId: string, message: string
                         type: 'buttons',
                         text: 'どちらで検索する？',
                         actions: [
+                            {
+                                type: 'postback',
+                                label: '取引ID',
+                                data: `action=searchTransactionById&transaction=${message}`
+                            },
                             {
                                 type: 'postback',
                                 label: '予約番号',
