@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- 注文返品機能を追加。
+- 注文照会にアクション履歴情報を追加。
+- 取引IDによる照会機能を追加。期限入れの取引詳細も確認できるように調整。
+- 注文照会に注文アイテム状態情報を追加。
 
 ### Changed
 

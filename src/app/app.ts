@@ -5,12 +5,15 @@
 
 import * as sskts from '@motionpicture/sskts-domain';
 import * as bodyParser from 'body-parser';
+import * as createDebug from 'debug';
 import * as express from 'express';
 
 import errorHandler from './middlewares/errorHandler';
 import notFoundHandler from './middlewares/notFoundHandler';
 
 import mongooseConnectionOptions from '../mongooseConnectionOptions';
+
+const debug = createDebug('sskts-line-assistant:*');
 
 const app = express();
 
@@ -27,7 +30,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // app.use(express.static(__dirname + '/../public'));
 
 // MongoDB接続
-sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
+sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions).then(debug).catch(console.error);
 
 // routers
 import router from './routes/router';

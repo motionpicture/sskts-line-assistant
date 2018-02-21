@@ -23,7 +23,7 @@ exports.URL_PUSH_MESSAGE = 'https://api.line.me/v2/bot/message/push';
  */
 function pushMessage(userId, text) {
     return __awaiter(this, void 0, void 0, function* () {
-        debug('pushing a message...', text);
+        debug('pushing a message to...', userId);
         // push message
         yield request.post({
             simple: false,
