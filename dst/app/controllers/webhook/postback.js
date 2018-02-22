@@ -140,6 +140,9 @@ function pushTransactionDetails(userId, orderNumber) {
         const taskStrs = tasks.map((task) => {
             let taskNameStr = '???';
             switch (task.name) {
+                case sskts.factory.taskName.PayPecorino:
+                    taskNameStr = 'Pecorino支払';
+                    break;
                 case sskts.factory.taskName.PayCreditCard:
                     taskNameStr = 'クレカ支払';
                     break;
@@ -406,18 +409,18 @@ function pushExpiredTransactionDetails(userId, transactionId) {
             .map((action) => {
             let actionName = action.purpose.typeOf;
             let description = '';
-            switch (action.purpose.typeOf) {
-                case sskts.factory.action.authorize.authorizeActionPurpose.CreditCard:
+            switch (action.object.typeOf) {
+                case sskts.factory.action.authorize.creditCard.ObjectType.CreditCard:
                     actionName = 'クレカオーソリ';
                     description = action.object.orderId;
                     break;
-                case sskts.factory.action.authorize.authorizeActionPurpose.SeatReservation:
+                case sskts.factory.action.authorize.seatReservation.ObjectType.SeatReservation:
                     actionName = '座席仮予約';
                     if (action.result !== undefined) {
                         description = action.result.updTmpReserveSeatResult.tmpReserveNum;
                     }
                     break;
-                case sskts.factory.action.authorize.authorizeActionPurpose.Mvtk:
+                case sskts.factory.action.authorize.mvtk.ObjectType.Mvtk:
                     actionName = 'ムビチケ承認';
                     if (action.result !== undefined) {
                         description = action.object.seatInfoSyncIn.knyknrNoInfo.map((i) => i.knyknrNo).join(',');
