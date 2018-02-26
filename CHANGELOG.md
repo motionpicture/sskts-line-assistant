@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Security
 
 
+## v2.3.1 - 2018-02-26
+- update sskts-domain.
+
 ## v2.3.0 - 2018-02-20
 ### Added
 - 注文返品機能を追加。
