@@ -98,14 +98,6 @@ export async function postback(event: LINE.IWebhookEvent, user: User) {
                 await PostbackController.pushNotification(userId, <string>data.transaction);
                 break;
 
-            case 'settleSeatReservation':
-                await PostbackController.settleSeatReservation(userId, <string>data.transaction);
-                break;
-
-            case 'createOwnershipInfos':
-                await PostbackController.createOwnershipInfos(userId, <string>data.transaction);
-                break;
-
             case 'searchTransactionsByDate':
                 await PostbackController.searchTransactionsByDate(userId, <string>event.postback.params.date);
                 break;

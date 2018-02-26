@@ -95,12 +95,6 @@ function postback(event, user) {
                 case 'pushNotification':
                     yield PostbackController.pushNotification(userId, data.transaction);
                     break;
-                case 'settleSeatReservation':
-                    yield PostbackController.settleSeatReservation(userId, data.transaction);
-                    break;
-                case 'createOwnershipInfos':
-                    yield PostbackController.createOwnershipInfos(userId, data.transaction);
-                    break;
                 case 'searchTransactionsByDate':
                     yield PostbackController.searchTransactionsByDate(userId, event.postback.params.date);
                     break;

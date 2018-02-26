@@ -156,22 +156,19 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     const taskStrs = tasks.map((task) => {
         let taskNameStr = '???';
         switch (task.name) {
-            case sskts.factory.taskName.SettleSeatReservation:
-                taskNameStr = '本予約';
+            case sskts.factory.taskName.PayPecorino:
+                taskNameStr = 'Pecorino支払';
                 break;
-            case sskts.factory.taskName.SettleCreditCard:
+            case sskts.factory.taskName.PayCreditCard:
                 taskNameStr = 'クレカ支払';
                 break;
-            case sskts.factory.taskName.SettleMvtk:
+            case sskts.factory.taskName.UseMvtk:
                 taskNameStr = 'ムビ使用';
                 break;
-            case sskts.factory.taskName.CreateOrder:
+            case sskts.factory.taskName.PlaceOrder:
                 taskNameStr = '注文作成';
                 break;
-            case sskts.factory.taskName.CreateOwnershipInfos:
-                taskNameStr = '所有権作成';
-                break;
-            case sskts.factory.taskName.SendEmailNotification:
+            case sskts.factory.taskName.SendEmailMessage:
                 taskNameStr = 'メール送信';
                 break;
             case sskts.factory.taskName.SendOrder:
@@ -466,18 +463,18 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
         .map((action) => {
             let actionName = action.purpose.typeOf;
             let description = '';
-            switch (action.purpose.typeOf) {
-                case sskts.factory.action.authorize.authorizeActionPurpose.CreditCard:
+            switch (action.object.typeOf) {
+                case sskts.factory.action.authorize.creditCard.ObjectType.CreditCard:
                     actionName = 'クレカオーソリ';
                     description = action.object.orderId;
                     break;
-                case sskts.factory.action.authorize.authorizeActionPurpose.SeatReservation:
+                case sskts.factory.action.authorize.seatReservation.ObjectType.SeatReservation:
                     actionName = '座席仮予約';
                     if (action.result !== undefined) {
                         description = action.result.updTmpReserveSeatResult.tmpReserveNum;
                     }
                     break;
-                case sskts.factory.action.authorize.authorizeActionPurpose.Mvtk:
+                case sskts.factory.action.authorize.mvtk.ObjectType.Mvtk:
                     actionName = 'ムビチケ承認';
                     if (action.result !== undefined) {
                         description = (<sskts.factory.action.authorize.mvtk.IAction>action).object.seatInfoSyncIn.knyknrNoInfo.map((i) => i.knyknrNo).join(',');
@@ -643,7 +640,7 @@ export async function pushNotification(userId: string, transactionId: string) {
 
     // タスク検索
     const tasks = await taskRepo.taskModel.find({
-        name: sskts.factory.taskName.SendEmailNotification,
+        name: sskts.factory.taskName.SendEmailMessage,
         'data.transactionId': transactionId
     }).exec();
 
@@ -667,78 +664,6 @@ export async function pushNotification(userId: string, transactionId: string) {
     }
 
     await LINE.pushMessage(userId, '送信完了');
-}
-
-/**
- * 座席の本予約を実行する
- * @export
- * @param userId LINEユーザーID
- * @param transactionId 取引ID
- */
-export async function settleSeatReservation(userId: string, transactionId: string) {
-    await LINE.pushMessage(userId, '本予約中...');
-
-    const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
-
-    // タスク検索
-    const tasks = await taskRepo.taskModel.find({
-        name: sskts.factory.taskName.SettleSeatReservation,
-        'data.transactionId': transactionId
-    }).exec();
-
-    if (tasks.length === 0) {
-        await LINE.pushMessage(userId, 'Task not found.');
-
-        return;
-    }
-
-    try {
-        await Promise.all(tasks.map(async (task) => {
-            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskRepo, sskts.mongoose.connection);
-        }));
-    } catch (error) {
-        await LINE.pushMessage(userId, `本予約失敗:${error.message}`);
-
-        return;
-    }
-
-    await LINE.pushMessage(userId, '本予約完了');
-}
-
-/**
- * 所有権作成を実行する
- * @export
- * @param userId LINEユーザーID
- * @param transactionId 取引ID
- */
-export async function createOwnershipInfos(userId: string, transactionId: string) {
-    await LINE.pushMessage(userId, '所有権作成中...');
-
-    const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
-
-    // タスク検索
-    const tasks = await taskRepo.taskModel.find({
-        name: sskts.factory.taskName.CreateOwnershipInfos,
-        'data.transactionId': transactionId
-    }).exec();
-
-    if (tasks.length === 0) {
-        await LINE.pushMessage(userId, 'Task not found.');
-
-        return;
-    }
-
-    try {
-        await Promise.all(tasks.map(async (task) => {
-            await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskRepo, sskts.mongoose.connection);
-        }));
-    } catch (error) {
-        await LINE.pushMessage(userId, `所有権作成失敗:${error.message}`);
-
-        return;
-    }
-
-    await LINE.pushMessage(userId, '所有権作成完了');
 }
 
 /**
