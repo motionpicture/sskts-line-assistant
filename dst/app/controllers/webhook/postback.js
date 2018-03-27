@@ -235,7 +235,7 @@ function pushTransactionDetails(userId, orderNumber) {
             return util.format('%s\n%s %s', moment(action.endDate).format('YYYY-MM-DD HH:mm:ss'), statusStr, actionName);
         }).join('\n');
         // tslint:disable:max-line-length
-        const transactionDetails = `----------------------------
+        const transactionDetails = [`----------------------------
 注文状態
 ----------------------------
 ${order.orderNumber}
@@ -254,28 +254,9 @@ ${actionStrs}
 注文アイテム状態
 ----------------------------
 ${ownershipInfosStr}
-
-----------------------------
-注文取引
-----------------------------
-${transaction.id}
-${report.status}
-----------------------------
-取引進行クライアント
-----------------------------
-${transaction.object.clientUser.client_id}
-${transaction.object.clientUser.iss}
-----------------------------
-取引状況
-----------------------------
-${moment(report.startDate).format('YYYY-MM-DD HH:mm:ss')} 開始
-${moment(report.endDate).format('YYYY-MM-DD HH:mm:ss')} 成立
-----------------------------
-取引処理履歴
-----------------------------
-${taskStrs}
-----------------------------
-販売者情報
+`,
+            `----------------------------
+販売者情報-${order.orderNumber}
 ----------------------------
 ${transaction.seller.typeOf}
 ${transaction.seller.id}
@@ -307,8 +288,30 @@ ${report.price}
 ${(report.discounts[0] !== undefined) ? report.discounts[0] : ''}
 ${(report.discountCodes[0] !== undefined) ? report.discountCodes[0] : ''}
 ￥${(report.discountPrices[0] !== undefined) ? report.discountPrices[0] : ''}
-`;
-        yield LINE.pushMessage(userId, transactionDetails);
+`,
+            `----------------------------
+注文取引-${order.orderNumber}
+----------------------------
+${transaction.id}
+${report.status}
+----------------------------
+取引進行クライアント
+----------------------------
+${transaction.object.clientUser.client_id}
+${transaction.object.clientUser.iss}
+----------------------------
+取引状況
+----------------------------
+${moment(report.startDate).format('YYYY-MM-DD HH:mm:ss')} 開始
+${moment(report.endDate).format('YYYY-MM-DD HH:mm:ss')} 成立
+----------------------------
+取引処理履歴
+----------------------------
+${taskStrs}
+`];
+        yield Promise.all(transactionDetails.map((text) => __awaiter(this, void 0, void 0, function* () {
+            yield LINE.pushMessage(userId, text);
+        })));
         // キュー実行のボタン表示
         const postActions = [];
         if (order.orderStatus === sskts.factory.orderStatus.OrderDelivered) {
@@ -444,11 +447,29 @@ function pushExpiredTransactionDetails(userId, transactionId) {
             return util.format('%s\n%s %s\n%s %s', moment(action.endDate).format('YYYY-MM-DD HH:mm:ss'), statusStr, actionName, statusStr, description);
         }).join('\n');
         // tslint:disable:max-line-length
-        const transactionDetails = `----------------------------
+        const transactionDetails = [`----------------------------
 注文取引概要
 ----------------------------
 ${transaction.id}
 ${report.status}
+----------------------------
+販売者情報
+----------------------------
+${transaction.seller.typeOf}
+${transaction.seller.id}
+${transaction.seller.name}
+${transaction.seller.url}
+----------------------------
+購入者情報
+----------------------------
+${report.customer.name}
+${report.customer.telephone}
+${report.customer.email}
+${(report.customer.memberOf !== undefined) ? `${report.customer.memberOf.membershipNumber}` : '非会員'}
+`,
+            `----------------------------
+注文取引
+${transaction.id}
 ----------------------------
 取引進行クライアント
 ----------------------------
@@ -467,22 +488,10 @@ ${actionStrs}
 取引処理履歴
 ----------------------------
 ${taskStrs}
-----------------------------
-販売者情報
-----------------------------
-${transaction.seller.typeOf}
-${transaction.seller.id}
-${transaction.seller.name}
-${transaction.seller.url}
-----------------------------
-購入者情報
-----------------------------
-${report.customer.name}
-${report.customer.telephone}
-${report.customer.email}
-${(report.customer.memberOf !== undefined) ? `${report.customer.memberOf.membershipNumber}` : '非会員'}
-`;
-        yield LINE.pushMessage(userId, transactionDetails);
+`];
+        yield Promise.all(transactionDetails.map((text) => __awaiter(this, void 0, void 0, function* () {
+            yield LINE.pushMessage(userId, text);
+        })));
     });
 }
 /**
