@@ -79,6 +79,13 @@ const EXPIRES_IN_SECONDS = parseInt(USER_EXPIRES_IN_SECONDS, 10);
 const POST_EVENT_TOKEN_EXPIRES_IN_SECONDS = 60;
 const SECRET = 'secret';
 
+const REFRESH_TOKEN_EXPIRES_IN_SECONDS_ENV = process.env.REFRESH_TOKEN_EXPIRES_IN_SECONDS;
+if (REFRESH_TOKEN_EXPIRES_IN_SECONDS_ENV === undefined) {
+    throw new Error('Environment variable REFRESH_TOKEN_EXPIRES_IN_SECONDS required.');
+}
+// tslint:disable-next-line:no-magic-numbers
+const REFRESH_TOKEN_EXPIRES_IN_SECONDS = parseInt(REFRESH_TOKEN_EXPIRES_IN_SECONDS_ENV, 10);
+
 /**
  * LINEユーザー
  * @see https://aws.amazon.com/blogs/mobile/integrating-amazon-cognito-user-pools-with-api-gateway/
@@ -149,12 +156,43 @@ export default class User {
             throw new Error('Access token is required for credentials.');
         }
 
+        if (credentials.refresh_token === undefined) {
+            throw new Error('Refresh token is required for credentials.');
+        }
+
         // ログイン状態を保持
         const results = await redisClient.multi()
             .set(`line-assistant.credentials.${this.userId}`, JSON.stringify(credentials))
             .expire(`line-assistant.credentials.${this.userId}`, EXPIRES_IN_SECONDS, debug)
             .exec();
         debug('results:', results);
+
+        // rekognitionコレクション作成
+        await new Promise((resolve, reject) => {
+            rekognition.createCollection(
+                {
+                    CollectionId: this.rekognitionCollectionId
+                },
+                async (err, __) => {
+                    if (err instanceof Error) {
+                        // すでに作成済であればok
+                        if (err.code === 'ResourceAlreadyExistsException') {
+                            resolve();
+                        } else {
+                            reject(err);
+                        }
+                    } else {
+                        resolve();
+                    }
+                });
+        });
+
+        // リフレッシュトークンを保管
+        await redisClient.multi()
+            .set(`line-assistant.refreshToken.${this.userId}`, credentials.refresh_token)
+            .expire(`line-assistant.refreshToken.${this.userId}`, REFRESH_TOKEN_EXPIRES_IN_SECONDS, debug)
+            .exec();
+        debug('refresh token saved.');
 
         this.setCredentials({ ...credentials, access_token: credentials.access_token });
 
