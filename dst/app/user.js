@@ -116,7 +116,7 @@ class User {
     }
     logout() {
         return __awaiter(this, void 0, void 0, function* () {
-            yield redisClient.del(`token.${this.userId}`);
+            yield redisClient.del(`line-assistant.credentials.${this.userId}`);
         });
     }
     saveCallbackState(state) {
