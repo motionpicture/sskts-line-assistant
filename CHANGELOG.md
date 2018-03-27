@@ -1,9 +1,11 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+
 ### Added
 
 ### Changed
@@ -14,8 +16,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 
-### Security
+- 取引照会結果の文字数が多い場合の対応。
 
+### Security
 
 ## v2.3.1 - 2018-02-26
 - update sskts-domain.

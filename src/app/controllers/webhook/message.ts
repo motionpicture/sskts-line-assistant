@@ -21,9 +21,8 @@ export async function pushHowToUse(userId: string) {
     // tslint:disable-next-line:no-multiline-string
     const text = `How to use
 ******** new! ********
-取引IDで検索できるようになりました。
-期限切れステータスの取引詳細を照会することができるようになりました。確定していない取引の仮予約情報、クレジットカードオーソリ情報を確認することができます。
-ログアウトできるようになりました。
+メニューから操作もできるようになりました。
+期限切れステータスの取引詳細を照会することができるようになりました。
 ******** new! ********
 --------------------
 予約番号で取引照会
@@ -35,19 +34,41 @@ export async function pushHowToUse(userId: string) {
 取引IDで取引照会
 --------------------
 [ID]と入力
-例:5a7b2ed6c993250364388acd
-
---------------------
-取引CSVダウンロード
---------------------
-'csv'と入力
-
---------------------
-ログアウト
---------------------
-'logout'と入力`;
+例:5a7b2ed6c993250364388acd`;
 
     await LINE.pushMessage(userId, text);
+
+    await request.post({
+        simple: false,
+        url: 'https://api.line.me/v2/bot/message/push',
+        auth: { bearer: process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN },
+        json: true,
+        body: {
+            to: userId,
+            messages: [
+                {
+                    type: 'template',
+                    altText: 'How to use',
+                    template: {
+                        type: 'buttons',
+                        text: '何をしましょうか？',
+                        actions: [
+                            {
+                                type: 'message',
+                                label: '取引CSVダウンロード',
+                                text: 'csv'
+                            },
+                            {
+                                type: 'message',
+                                label: 'ログアウト',
+                                text: 'logout'
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }).promise();
 }
 
 /**
