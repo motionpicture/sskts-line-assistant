@@ -10,6 +10,7 @@ import * as request from 'request-promise-native';
 import * as LINE from '../../line';
 import User from '../user';
 import * as MessageController from './webhook/message';
+import * as ImageMessageController from './webhook/message/image';
 import * as PostbackController from './webhook/postback';
 
 const debug = createDebug('sskts-line-assistant:controller:webhook');
@@ -18,52 +19,75 @@ const debug = createDebug('sskts-line-assistant:controller:webhook');
  * メッセージが送信されたことを示すEvent Objectです。
  */
 export async function message(event: LINE.IWebhookEvent, user: User) {
-    const messageText: string = event.message.text;
     const userId = event.source.userId;
 
     try {
-        switch (true) {
-            // [劇場コード]-[予約番号 or 電話番号] or 取引IDで検索
-            case /^\d{3}-\d{1,12}|\w{24}$/.test(messageText):
-                await MessageController.pushButtonsReserveNumOrTel(userId, messageText);
+        if (event.message === undefined) {
+            throw new Error('event.message not found.');
+        }
+
+        switch (event.message.type) {
+            case LINE.MessageType.text:
+                const messageText = <string>event.message.text;
+
+                switch (true) {
+                    // 取引照会に必要な情報を求める
+                    case /^取引照会$/.test(messageText):
+                        await MessageController.askTransactionInquiryKey(user);
+                        break;
+
+                    // [劇場コード]-[予約番号 or 電話番号] or 取引IDで検索
+                    case /^\d{3}-\d{1,12}|\w{24}$/.test(messageText):
+                        await MessageController.pushButtonsReserveNumOrTel(userId, messageText);
+                        break;
+
+                    // 取引csv要求
+                    case /^csv$/.test(messageText):
+                        await MessageController.askFromWhenAndToWhen(userId);
+                        break;
+
+                    // 取引csv期間指定
+                    case /^\d{8}-\d{8}$/.test(messageText):
+                        // tslint:disable-next-line:no-magic-numbers
+                        await MessageController.publishURI4transactionsCSV(userId, messageText.substr(0, 8), messageText.substr(9, 8));
+                        break;
+
+                    // ログアウト
+                    case /^logout$/.test(messageText):
+                        await MessageController.logout(user);
+                        break;
+
+                    default:
+                        // まず二段階認証フローかどうか確認
+                        const postEvent = await user.verifyMFAPass(messageText);
+                        debug('postEvent from pass:', postEvent);
+                        if (postEvent !== null) {
+                            // postEventがあれば送信
+                            await request.post(`https://${user.host}/webhook`, {
+                                // tslint:disable-next-line:no-http-string
+                                // await request.post('http://localhost:8080/webhook', {
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                form: postEvent
+                            }).promise();
+
+                            return;
+                        }
+
+                        // 予約照会方法をアドバイス
+                        await MessageController.pushHowToUse(userId);
+                }
+
                 break;
 
-            // 取引csv要求
-            case /^csv$/.test(messageText):
-                await MessageController.askFromWhenAndToWhen(userId);
-                break;
+            case LINE.MessageType.image:
+                await ImageMessageController.indexFace(user, event.message.id);
 
-            // 取引csv期間指定
-            case /^\d{8}-\d{8}$/.test(messageText):
-                // tslint:disable-next-line:no-magic-numbers
-                await MessageController.publishURI4transactionsCSV(userId, messageText.substr(0, 8), messageText.substr(9, 8));
-                break;
-
-            // ログアウト
-            case /^logout$/.test(messageText):
-                await MessageController.logout(user);
                 break;
 
             default:
-                // まず二段階認証フローかどうか確認
-                const postEvent = await user.verifyMFAPass(messageText);
-                debug('postEvent from pass:', postEvent);
-                if (postEvent !== null) {
-                    // postEventがあれば送信
-                    await request.post(`https://${user.host}/webhook`, {
-                        // tslint:disable-next-line:no-http-string
-                        // await request.post('http://localhost:8080/webhook', {
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        form: postEvent
-                    }).promise();
-
-                    return;
-                }
-
-                // 予約照会方法をアドバイス
-                await MessageController.pushHowToUse(userId);
+                throw new Error(`Unknown message type ${event.message.type}`);
         }
     } catch (error) {
         console.error(error);

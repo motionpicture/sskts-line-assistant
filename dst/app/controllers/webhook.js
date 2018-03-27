@@ -17,6 +17,7 @@ const querystring = require("querystring");
 const request = require("request-promise-native");
 const LINE = require("../../line");
 const MessageController = require("./webhook/message");
+const ImageMessageController = require("./webhook/message/image");
 const PostbackController = require("./webhook/postback");
 const debug = createDebug('sskts-line-assistant:controller:webhook');
 /**
@@ -24,45 +25,61 @@ const debug = createDebug('sskts-line-assistant:controller:webhook');
  */
 function message(event, user) {
     return __awaiter(this, void 0, void 0, function* () {
-        const messageText = event.message.text;
         const userId = event.source.userId;
         try {
-            switch (true) {
-                // [劇場コード]-[予約番号 or 電話番号] or 取引IDで検索
-                case /^\d{3}-\d{1,12}|\w{24}$/.test(messageText):
-                    yield MessageController.pushButtonsReserveNumOrTel(userId, messageText);
+            if (event.message === undefined) {
+                throw new Error('event.message not found.');
+            }
+            switch (event.message.type) {
+                case LINE.MessageType.text:
+                    const messageText = event.message.text;
+                    switch (true) {
+                        // 取引照会に必要な情報を求める
+                        case /^取引照会$/.test(messageText):
+                            yield MessageController.askTransactionInquiryKey(user);
+                            break;
+                        // [劇場コード]-[予約番号 or 電話番号] or 取引IDで検索
+                        case /^\d{3}-\d{1,12}|\w{24}$/.test(messageText):
+                            yield MessageController.pushButtonsReserveNumOrTel(userId, messageText);
+                            break;
+                        // 取引csv要求
+                        case /^csv$/.test(messageText):
+                            yield MessageController.askFromWhenAndToWhen(userId);
+                            break;
+                        // 取引csv期間指定
+                        case /^\d{8}-\d{8}$/.test(messageText):
+                            // tslint:disable-next-line:no-magic-numbers
+                            yield MessageController.publishURI4transactionsCSV(userId, messageText.substr(0, 8), messageText.substr(9, 8));
+                            break;
+                        // ログアウト
+                        case /^logout$/.test(messageText):
+                            yield MessageController.logout(user);
+                            break;
+                        default:
+                            // まず二段階認証フローかどうか確認
+                            const postEvent = yield user.verifyMFAPass(messageText);
+                            debug('postEvent from pass:', postEvent);
+                            if (postEvent !== null) {
+                                // postEventがあれば送信
+                                yield request.post(`https://${user.host}/webhook`, {
+                                    // tslint:disable-next-line:no-http-string
+                                    // await request.post('http://localhost:8080/webhook', {
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    form: postEvent
+                                }).promise();
+                                return;
+                            }
+                            // 予約照会方法をアドバイス
+                            yield MessageController.pushHowToUse(userId);
+                    }
                     break;
-                // 取引csv要求
-                case /^csv$/.test(messageText):
-                    yield MessageController.askFromWhenAndToWhen(userId);
-                    break;
-                // 取引csv期間指定
-                case /^\d{8}-\d{8}$/.test(messageText):
-                    // tslint:disable-next-line:no-magic-numbers
-                    yield MessageController.publishURI4transactionsCSV(userId, messageText.substr(0, 8), messageText.substr(9, 8));
-                    break;
-                // ログアウト
-                case /^logout$/.test(messageText):
-                    yield MessageController.logout(user);
+                case LINE.MessageType.image:
+                    yield ImageMessageController.indexFace(user, event.message.id);
                     break;
                 default:
-                    // まず二段階認証フローかどうか確認
-                    const postEvent = yield user.verifyMFAPass(messageText);
-                    debug('postEvent from pass:', postEvent);
-                    if (postEvent !== null) {
-                        // postEventがあれば送信
-                        yield request.post(`https://${user.host}/webhook`, {
-                            // tslint:disable-next-line:no-http-string
-                            // await request.post('http://localhost:8080/webhook', {
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            form: postEvent
-                        }).promise();
-                        return;
-                    }
-                    // 予約照会方法をアドバイス
-                    yield MessageController.pushHowToUse(userId);
+                    throw new Error(`Unknown message type ${event.message.type}`);
             }
         }
         catch (error) {

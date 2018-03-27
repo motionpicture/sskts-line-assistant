@@ -19,22 +19,10 @@ const debug = createDebug('sskts-line-assistant:controller:webhook:message');
  */
 export async function pushHowToUse(userId: string) {
     // tslint:disable-next-line:no-multiline-string
-    const text = `How to use
-******** new! ********
+    const text = `Information
+----------------
 メニューから操作もできるようになりました。
-期限切れステータスの取引詳細を照会することができるようになりました。
-******** new! ********
---------------------
-予約番号で取引照会
---------------------
-[劇場コード]-[予約番号]と入力
-例:118-2425
-
---------------------
-取引IDで取引照会
---------------------
-[ID]と入力
-例:5a7b2ed6c993250364388acd`;
+期限切れステータスの取引詳細を照会することができるようになりました。`;
 
     await LINE.pushMessage(userId, text);
 
@@ -55,8 +43,18 @@ export async function pushHowToUse(userId: string) {
                         actions: [
                             {
                                 type: 'message',
+                                label: '取引照会',
+                                text: '取引照会'
+                            },
+                            {
+                                type: 'message',
                                 label: '取引CSVダウンロード',
                                 text: 'csv'
+                            },
+                            {
+                                type: 'uri',
+                                label: '顔を登録する',
+                                uri: 'line://nv/camera/'
                             },
                             {
                                 type: 'message',
@@ -69,6 +67,16 @@ export async function pushHowToUse(userId: string) {
             ]
         }
     }).promise();
+}
+
+export async function askTransactionInquiryKey(user: User) {
+    // tslint:disable-next-line:no-multiline-string
+    await LINE.pushMessage(user.userId, `次のいずれかを入力してください。
+1. [劇場コード]-[予約番号]
+例:118-2425
+
+2. 取引ID
+例:5a7b2ed6c993250364388acd`);
 }
 
 /**
