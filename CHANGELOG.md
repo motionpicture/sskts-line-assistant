@@ -16,9 +16,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 
-- 取引照会結果の文字数が多い場合の対応。
-
 ### Security
+
+## v2.3.2 - 2018-03-27
+
+### Fixed
+
+- 取引照会結果の文字数が多い場合の対応。
 
 ## v2.3.1 - 2018-02-26
 - update sskts-domain.
