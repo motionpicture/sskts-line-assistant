@@ -25,22 +25,10 @@ const debug = createDebug('sskts-line-assistant:controller:webhook:message');
 function pushHowToUse(userId) {
     return __awaiter(this, void 0, void 0, function* () {
         // tslint:disable-next-line:no-multiline-string
-        const text = `How to use
-******** new! ********
+        const text = `Information
+----------------
 メニューから操作もできるようになりました。
-期限切れステータスの取引詳細を照会することができるようになりました。
-******** new! ********
---------------------
-予約番号で取引照会
---------------------
-[劇場コード]-[予約番号]と入力
-例:118-2425
-
---------------------
-取引IDで取引照会
---------------------
-[ID]と入力
-例:5a7b2ed6c993250364388acd`;
+期限切れステータスの取引詳細を照会することができるようになりました。`;
         yield LINE.pushMessage(userId, text);
         yield request.post({
             simple: false,
@@ -59,8 +47,18 @@ function pushHowToUse(userId) {
                             actions: [
                                 {
                                     type: 'message',
+                                    label: '取引照会',
+                                    text: '取引照会'
+                                },
+                                {
+                                    type: 'message',
                                     label: '取引CSVダウンロード',
                                     text: 'csv'
+                                },
+                                {
+                                    type: 'uri',
+                                    label: '顔を登録する',
+                                    uri: 'line://nv/camera/'
                                 },
                                 {
                                     type: 'message',
@@ -76,6 +74,18 @@ function pushHowToUse(userId) {
     });
 }
 exports.pushHowToUse = pushHowToUse;
+function askTransactionInquiryKey(user) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // tslint:disable-next-line:no-multiline-string
+        yield LINE.pushMessage(user.userId, `次のいずれかを入力してください。
+1. [劇場コード]-[予約番号]
+例:118-2425
+
+2. 取引ID
+例:5a7b2ed6c993250364388acd`);
+    });
+}
+exports.askTransactionInquiryKey = askTransactionInquiryKey;
 /**
  * 予約番号or電話番号のボタンを送信する
  * @export

@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+## v2.4.0 - 2018-03-28
+
+### Added
+
+- Face Loginを追加。
+
 ## v2.3.2 - 2018-03-27
 
 ### Fixed

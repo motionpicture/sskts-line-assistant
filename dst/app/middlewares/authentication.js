@@ -17,6 +17,7 @@ const express_middleware_1 = require("@motionpicture/express-middleware");
 const sskts = require("@motionpicture/sskts-domain");
 const http_status_1 = require("http-status");
 const request = require("request-promise-native");
+const url_1 = require("url");
 const LINE = require("../../line");
 const user_1 = require("../user");
 exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
@@ -71,6 +72,42 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
 });
 function sendLoginButton(user) {
     return __awaiter(this, void 0, void 0, function* () {
+        // tslint:disable-next-line:no-multiline-string
+        let text = 'ログインしてください。一度ログイン後、顔写真を登録すると次回からFace Loginを使用できます。';
+        const signInUrl = new url_1.URL(user.generateAuthUrl());
+        const actions = [
+            {
+                type: 'uri',
+                label: 'Sign In',
+                uri: signInUrl.href
+            }
+        ];
+        const refreshToken = yield user.getRefreshToken();
+        const faces = yield user.searchFaces();
+        // リフレッシュトークン保管済、かつ、顔画像登録済であればFace Login使用可能
+        if (refreshToken !== null && faces.length > 0) {
+            text = 'ログインしてください。';
+            // actions.push({
+            //     type: 'postback',
+            //     label: 'Face Login',
+            //     data: `action=loginByFace&state=${user.state}`
+            // });
+            actions.push({
+                type: 'uri',
+                label: 'Face Login',
+                uri: 'line://nv/camera/'
+            });
+        }
+        // 会員として未使用であれば会員登録ボタン表示
+        if (refreshToken === null) {
+            // const signUpUrl = new URL(signInUrl.href);
+            // signUpUrl.pathname = 'signup';
+            // actions.push({
+            //     type: 'uri',
+            //     label: '会員登録',
+            //     uri: signUpUrl.href
+            // });
+        }
         yield request.post({
             simple: false,
             url: LINE.URL_PUSH_MESSAGE,
@@ -81,17 +118,11 @@ function sendLoginButton(user) {
                 messages: [
                     {
                         type: 'template',
-                        altText: 'Sign In',
+                        altText: 'ログインボタン',
                         template: {
                             type: 'buttons',
-                            text: 'ログインしてください。ユーザー情報が不明な場合、管理者に直接問い合わせてください。',
-                            actions: [
-                                {
-                                    type: 'uri',
-                                    label: 'Sign In',
-                                    uri: user.generateAuthUrl()
-                                }
-                            ]
+                            text: text,
+                            actions: actions
                         }
                     }
                 ]

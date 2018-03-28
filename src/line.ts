@@ -2,6 +2,31 @@
  * LINEモジュール
  */
 
+export interface IMessage {
+    id: string;
+    // tslint:disable-next-line:no-reserved-keywords
+    type: MessageType;
+    text?: string;
+    fileName?: string;
+    fileSize?: number;
+    packageId?: string;
+    stickerId?: string;
+    title?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+}
+
+export enum MessageType {
+    text = 'text',
+    image = 'image',
+    video = 'video',
+    audio = 'audio',
+    file = 'file',
+    location = 'location',
+    sticker = 'sticker'
+}
+
 export type IEventType = 'message' | 'follow' | 'unfollow' | 'join' | 'leave' | 'postback' | 'beacon';
 export interface IWebhookEvent {
     // tslint:disable-next-line:no-reserved-keywords
@@ -14,7 +39,7 @@ export interface IWebhookEvent {
         groupId?: string;
         roomId?: string;
     };
-    message?: any;
+    message?: IMessage;
     postback?: any;
     replyToken?: string;
 }
@@ -29,11 +54,9 @@ export const URL_PUSH_MESSAGE = 'https://api.line.me/v2/bot/message/push';
 /**
  * メッセージ送信
  * @export
- * @param userId LINEユーザーID
- * @param text メッセージ
  */
 export async function pushMessage(userId: string, text: string) {
-    debug('pushing a message to...', userId);
+    debug('pushing a message...', text);
     // push message
     await request.post({
         simple: false,
@@ -49,5 +72,18 @@ export async function pushMessage(userId: string, text: string) {
                 }
             ]
         }
+    }).promise();
+}
+
+/**
+ * メッセージIDからユーザーが送信した画像、動画、および音声のデータを取得する
+ * @param messageId メッセージID
+ */
+export async function getContent(messageId: string) {
+    return request.get({
+        encoding: null,
+        simple: false,
+        url: `https://api.line.me/v2/bot/message/${messageId}/content`,
+        auth: { bearer: <string>process.env.LINE_BOT_CHANNEL_ACCESS_TOKEN }
     }).promise();
 }

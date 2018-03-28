@@ -351,13 +351,19 @@ ${taskStrs}
     }));
 
     // キュー実行のボタン表示
-    const postActions = [];
-    if (order.orderStatus === sskts.factory.orderStatus.OrderDelivered) {
-        postActions.push({
+    const postActions = [
+        {
             type: 'postback',
-            label: 'メール送信',
-            data: `action=pushNotification&transaction=${transaction.id}`
-        });
+            label: '再照会する',
+            data: `action=searchTransactionById&transaction=${transaction.id}`
+        }
+    ];
+    if (order.orderStatus === sskts.factory.orderStatus.OrderDelivered) {
+        // postActions.push({
+        //     type: 'postback',
+        //     label: 'メール送信',
+        //     data: `action=pushNotification&transaction=${transaction.id}`
+        // });
         postActions.push({
             type: 'postback',
             label: '返品する',
@@ -379,7 +385,7 @@ ${taskStrs}
                         altText: 'aaa',
                         template: {
                             type: 'buttons',
-                            text: '以下アクションを実行できます。',
+                            text: '本取引に対して何かアクションを実行しますか？',
                             actions: postActions
                         }
                     }
