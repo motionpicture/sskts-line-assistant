@@ -16,9 +16,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 
-- 期限切れ取引の承認アクション履歴の取得方法を修正。
-
 ### Security
+
+## v2.4.1 - 2018-04-19
+
+### Fixed
+
+- 期限切れ取引の承認アクション履歴の取得方法を修正。
 
 ## v2.4.0 - 2018-03-28
 
