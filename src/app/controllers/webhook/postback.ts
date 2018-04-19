@@ -461,7 +461,8 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
     const actions = await actionRepo.actionModel.find(
         {
             typeOf: sskts.factory.actionType.AuthorizeAction,
-            'object.transactionId': transaction.id
+            'purpose.typeOf': ssktsapi.factory.transactionType.PlaceOrder,
+            'purpose.id': transaction.id
         }
     ).exec().then((docs) => docs.map((doc) => doc.toObject()));
     debug('actions:', actions);
@@ -470,7 +471,10 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
     const actionStrs = actions
         .sort((a, b) => moment(a.endDate).unix() - moment(b.endDate).unix())
         .map((action) => {
-            let actionName = action.purpose.typeOf;
+            let actionName = `${action.typeOf} of ${action.object.typeOf}`;
+            if (action.purpose !== undefined) {
+                actionName += ` for ${action.purpose.typeOf}`;
+            }
             let description = '';
             switch (action.object.typeOf) {
                 case sskts.factory.action.authorize.creditCard.ObjectType.CreditCard:
