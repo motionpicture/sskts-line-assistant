@@ -181,10 +181,12 @@ function publishURI4transactionsCSV(userId, dateFrom, dateThrough) {
         yield LINE.pushMessage(userId, `${dateFrom}-${dateThrough}の取引を検索しています...`);
         const startFrom = moment(`${dateFrom}T00:00:00+09:00`, 'YYYYMMDDThh:mm:ssZ');
         const startThrough = moment(`${dateThrough}T00:00:00+09:00`, 'YYYYMMDDThh:mm:ssZ').add(1, 'day');
-        const csv = yield sskts.service.transaction.placeOrder.download({
+        const csv = yield sskts.service.report.transaction.download({
             startFrom: startFrom.toDate(),
             startThrough: startThrough.toDate()
-        }, 'csv')(new sskts.repository.Transaction(sskts.mongoose.connection));
+        }, 'csv')({
+            transaction: new sskts.repository.Transaction(sskts.mongoose.connection)
+        });
         yield LINE.pushMessage(userId, 'csvを作成しています...');
         const sasUrl = yield sskts.service.util.uploadFile({
             fileName: `sskts-line-assistant-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`,

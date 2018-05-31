@@ -1,8 +1,6 @@
 /**
  * LINE webhook postbackコントローラー
- * @namespace app.controllers.webhook.postback
  */
-
 import * as ssktsapi from '@motionpicture/sskts-api-nodejs-client';
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
@@ -26,7 +24,7 @@ export async function searchTransactionById(userId: string, transactionId: strin
 
     // 取引検索
     const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
-    const transaction = await transactionRepo.findPlaceOrderById(transactionId);
+    const transaction = await transactionRepo.findById(sskts.factory.transactionType.PlaceOrder, transactionId);
 
     switch (transaction.status) {
         case sskts.factory.transactionStatusType.InProgress:
@@ -125,26 +123,50 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     }
 
     // 所有権検索
-    type IReservation = ssktsapi.factory.reservation.event.IEventReservation<ssktsapi.factory.event.individualScreeningEvent.IEvent>;
     const ownershipInfos = await ownershipInfo.ownershipInfoModel.find({
         identifier: { $in: transactionResult.ownershipInfos.map((o) => o.identifier) }
-    }).exec().then((docs) => docs.map((doc) => <ssktsapi.factory.ownershipInfo.IOwnershipInfo<IReservation>>doc.toObject()));
+    }).exec().then((docs) => docs.map(
+        (doc) => <ssktsapi.factory.ownershipInfo.IOwnershipInfo<ssktsapi.factory.ownershipInfo.IGoodType>>doc.toObject()
+    ));
     debug(ownershipInfos.length, 'ownershipInfos found.');
 
-    const ownershipInfosStr = ownershipInfos.map(
-        (i) => {
-            return util.format(
-                '💲%s\n%s %s\n@%s\n~%s',
-                i.identifier,
-                i.typeOfGood.reservedTicket.ticketedSeat.seatNumber,
-                i.typeOfGood.reservedTicket.coaTicketInfo.ticketName,
-                i.typeOfGood.reservationStatus,
-                moment(i.ownedThrough).format('YYYY-MM-DD HH:mm:ss')
-            );
-        }
-    ).join('\n');
+    const ownershipInfosStr = ownershipInfos.map((i) => {
+        switch (i.typeOfGood.typeOf) {
+            case ssktsapi.factory.reservationType.EventReservation:
+                return util.format(
+                    '💲%s\n%s %s\n@%s\n~%s',
+                    i.identifier,
+                    i.typeOfGood.reservedTicket.ticketedSeat.seatNumber,
+                    i.typeOfGood.reservedTicket.coaTicketInfo.ticketName,
+                    i.typeOfGood.reservationStatus,
+                    moment(i.ownedThrough).format('YYYY-MM-DD HH:mm:ss')
+                );
 
-    const report = sskts.service.transaction.placeOrder.transaction2report(transaction);
+            case 'ProgramMembership':
+                return util.format(
+                    '💲%s\n%s\n~%s',
+                    i.identifier,
+                    i.typeOfGood.programName,
+                    moment(i.ownedThrough).format('YYYY-MM-DD HH:mm:ss')
+                );
+
+            case ssktsapi.factory.pecorino.account.AccountType.Account:
+                return util.format(
+                    '💲%s\n%s\n~%s',
+                    i.identifier,
+                    i.typeOfGood.accountNumber,
+                    moment(i.ownedThrough).format('YYYY-MM-DD HH:mm:ss')
+                );
+
+            default:
+                return i.identifier;
+        }
+    }).join('\n');
+
+    const report = sskts.service.report.transaction.transaction2report({
+        transaction: transaction,
+        order: order
+    });
     debug('report:', report);
 
     // 非同期タスク検索
@@ -310,7 +332,7 @@ ${(report.customer.memberOf !== undefined) ? `${report.customer.memberOf.members
 ${report.eventName}
 ${moment(report.eventStartDate).format('YYYY-MM-DD HH:mm')}-${moment(report.eventEndDate).format('HH:mm')}
 @${report.superEventLocation} ${report.eventLocation}
-${report.reservedTickets}
+${report.items.map((i) => `${i.typeOf} ${i.name} x${i.numItems} ￥${i.totalPrice}`)}
 ----------------------------
 決済方法
 ----------------------------
@@ -332,8 +354,8 @@ ${report.status}
 ----------------------------
 取引進行クライアント
 ----------------------------
-${transaction.object.clientUser.client_id}
-${transaction.object.clientUser.iss}
+${(transaction.object.clientUser !== undefined) ? transaction.object.clientUser.client_id : ''}
+${(transaction.object.clientUser !== undefined) ? transaction.object.clientUser.iss : ''}
 ----------------------------
 取引状況
 ----------------------------
@@ -407,8 +429,8 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
     const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
 
     // 取引検索
-    const transaction = await transactionRepo.findPlaceOrderById(transactionId);
-    const report = sskts.service.transaction.placeOrder.transaction2report(transaction);
+    const transaction = await transactionRepo.findById(ssktsapi.factory.transactionType.PlaceOrder, transactionId);
+    const report = sskts.service.report.transaction.transaction2report({ transaction: transaction });
     debug('report:', report);
 
     // 非同期タスク検索
@@ -477,20 +499,20 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
             }
             let description = '';
             switch (action.object.typeOf) {
-                case sskts.factory.action.authorize.creditCard.ObjectType.CreditCard:
+                case sskts.factory.action.authorize.paymentMethod.creditCard.ObjectType.CreditCard:
                     actionName = 'クレカオーソリ';
                     description = action.object.orderId;
                     break;
-                case sskts.factory.action.authorize.seatReservation.ObjectType.SeatReservation:
+                case sskts.factory.action.authorize.offer.seatReservation.ObjectType.SeatReservation:
                     actionName = '座席仮予約';
                     if (action.result !== undefined) {
                         description = action.result.updTmpReserveSeatResult.tmpReserveNum;
                     }
                     break;
-                case sskts.factory.action.authorize.mvtk.ObjectType.Mvtk:
+                case sskts.factory.action.authorize.discount.mvtk.ObjectType.Mvtk:
                     actionName = 'ムビチケ承認';
                     if (action.result !== undefined) {
-                        description = (<sskts.factory.action.authorize.mvtk.IAction>action).object.seatInfoSyncIn.knyknrNoInfo.map((i) => i.knyknrNo).join(',');
+                        description = (<sskts.factory.action.authorize.discount.mvtk.IAction>action).object.seatInfoSyncIn.knyknrNoInfo.map((i) => i.knyknrNo).join(',');
                     }
                     break;
                 default:
@@ -548,8 +570,8 @@ ${transaction.id}
 ----------------------------
 取引進行クライアント
 ----------------------------
-${transaction.object.clientUser.client_id}
-${transaction.object.clientUser.iss}
+${(transaction.object.clientUser !== undefined) ? transaction.object.clientUser.client_id : ''}
+${(transaction.object.clientUser !== undefined) ? transaction.object.clientUser.iss : ''}
 ----------------------------
 取引状況
 ----------------------------
@@ -671,7 +693,10 @@ export async function pushNotification(userId: string, transactionId: string) {
 
     let promises: Promise<void>[] = [];
     promises = promises.concat(tasks.map(async (task) => {
-        await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())(taskRepo, sskts.mongoose.connection);
+        await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())({
+            taskRepo: taskRepo,
+            connection: sskts.mongoose.connection
+        });
     }));
 
     try {
@@ -697,13 +722,15 @@ export async function searchTransactionsByDate(userId: string, date: string) {
     const startFrom = moment(`${date}T00:00:00+09:00`);
     const startThrough = moment(`${date}T00:00:00+09:00`).add(1, 'day');
 
-    const csv = await sskts.service.transaction.placeOrder.download(
+    const csv = await sskts.service.report.transaction.download(
         {
             startFrom: startFrom.toDate(),
             startThrough: startThrough.toDate()
         },
         'csv'
-    )(new sskts.repository.Transaction(sskts.mongoose.connection));
+    )({
+        transaction: new sskts.repository.Transaction(sskts.mongoose.connection)
+    });
 
     await LINE.pushMessage(userId, 'csvを作成しています...');
 

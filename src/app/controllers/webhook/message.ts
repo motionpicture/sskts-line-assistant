@@ -176,13 +176,15 @@ export async function publishURI4transactionsCSV(userId: string, dateFrom: strin
     const startFrom = moment(`${dateFrom}T00:00:00+09:00`, 'YYYYMMDDThh:mm:ssZ');
     const startThrough = moment(`${dateThrough}T00:00:00+09:00`, 'YYYYMMDDThh:mm:ssZ').add(1, 'day');
 
-    const csv = await sskts.service.transaction.placeOrder.download(
+    const csv = await sskts.service.report.transaction.download(
         {
             startFrom: startFrom.toDate(),
             startThrough: startThrough.toDate()
         },
         'csv'
-    )(new sskts.repository.Transaction(sskts.mongoose.connection));
+    )({
+        transaction: new sskts.repository.Transaction(sskts.mongoose.connection)
+    });
 
     await LINE.pushMessage(userId, 'csvを作成しています...');
 
