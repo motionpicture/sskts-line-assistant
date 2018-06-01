@@ -272,7 +272,8 @@ ${ownershipInfosStr}
 ----------------------------
 ${transaction.seller.typeOf}
 ${transaction.seller.id}
-${transaction.seller.name}
+${transaction.seller.identifier}
+${transaction.seller.name.ja}
 ${transaction.seller.url}
 ----------------------------
 購入者情報
@@ -479,7 +480,8 @@ ${report.status}
 ----------------------------
 ${transaction.seller.typeOf}
 ${transaction.seller.id}
-${transaction.seller.name}
+${transaction.seller.identifier}
+${transaction.seller.name.ja}
 ${transaction.seller.url}
 ----------------------------
 購入者情報
