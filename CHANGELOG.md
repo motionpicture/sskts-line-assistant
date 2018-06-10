@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 - 取引照会結果を複数注文アイテムタイプに対応。
 - 取引レポートの内容を拡張。
+- install sskts-domain@25.x.x
 
 ### Deprecated
 

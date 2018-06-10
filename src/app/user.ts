@@ -34,6 +34,10 @@ export interface ICredentials {
      */
     expiry_date?: number;
     /**
+     * IDトークン
+     */
+    id_token?: string;
+    /**
      * アクセストークン
      */
     access_token: string;
