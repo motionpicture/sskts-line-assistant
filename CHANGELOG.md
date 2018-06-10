@@ -18,6 +18,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+## v2.5.0 - 2018-06-10
+
+### Changed
+
+- 取引照会結果を複数注文アイテムタイプに対応。
+- 取引レポートの内容を拡張。
+- install sskts-domain@25.x.x
+
 ## v2.4.1 - 2018-04-19
 
 ### Fixed
