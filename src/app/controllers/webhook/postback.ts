@@ -150,7 +150,7 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
                     moment(i.ownedThrough).format('YYYY-MM-DD HH:mm:ss')
                 );
 
-            case ssktsapi.factory.pecorino.account.AccountType.Account:
+            case ssktsapi.factory.pecorino.account.TypeOf.Account:
                 return util.format(
                     '💲%s\n%s\n~%s',
                     i.identifier,
@@ -172,7 +172,7 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     // 非同期タスク検索
     const tasks = await taskRepo.taskModel.find({
         'data.transactionId': transaction.id
-    }).exec().then((docs) => docs.map((doc) => <sskts.factory.task.ITask>doc.toObject()));
+    }).exec().then((docs) => docs.map((doc) => <sskts.factory.task.ITask<sskts.factory.taskName>>doc.toObject()));
 
     // タスクの実行日時を調べる
     const taskStrs = tasks.map((task) => {
@@ -437,7 +437,7 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
     // 非同期タスク検索
     const tasks = await taskRepo.taskModel.find({
         'data.transactionId': transaction.id
-    }).exec().then((docs) => docs.map((doc) => <sskts.factory.task.ITask>doc.toObject()));
+    }).exec().then((docs) => docs.map((doc) => <sskts.factory.task.ITask<sskts.factory.taskName>>doc.toObject()));
 
     // タスクの実行日時を調べる
     const taskStrs = tasks.map((task) => {
@@ -695,7 +695,7 @@ export async function pushNotification(userId: string, transactionId: string) {
 
     let promises: Promise<void>[] = [];
     promises = promises.concat(tasks.map(async (task) => {
-        await sskts.service.task.execute(<sskts.factory.task.ITask>task.toObject())({
+        await sskts.service.task.execute(<sskts.factory.task.ITask<sskts.factory.taskName>>task.toObject())({
             taskRepo: taskRepo,
             connection: sskts.mongoose.connection
         });
