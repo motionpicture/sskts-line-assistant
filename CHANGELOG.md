@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+## v2.5.1 - 2018-12-10
+
+### Changed
+
+- update sskts-domain
+
 ## v2.5.0 - 2018-06-10
 
 ### Changed

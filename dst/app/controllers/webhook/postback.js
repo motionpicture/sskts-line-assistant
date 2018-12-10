@@ -133,7 +133,7 @@ function pushTransactionDetails(userId, orderNumber) {
                     return util.format('💲%s\n%s %s\n@%s\n~%s', i.identifier, i.typeOfGood.reservedTicket.ticketedSeat.seatNumber, i.typeOfGood.reservedTicket.coaTicketInfo.ticketName, i.typeOfGood.reservationStatus, moment(i.ownedThrough).format('YYYY-MM-DD HH:mm:ss'));
                 case 'ProgramMembership':
                     return util.format('💲%s\n%s\n~%s', i.identifier, i.typeOfGood.programName, moment(i.ownedThrough).format('YYYY-MM-DD HH:mm:ss'));
-                case ssktsapi.factory.pecorino.account.AccountType.Account:
+                case ssktsapi.factory.pecorino.account.TypeOf.Account:
                     return util.format('💲%s\n%s\n~%s', i.identifier, i.typeOfGood.accountNumber, moment(i.ownedThrough).format('YYYY-MM-DD HH:mm:ss'));
                 default:
                     return i.identifier;
