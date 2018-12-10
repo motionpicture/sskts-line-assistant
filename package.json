@@ -24,7 +24,8 @@
     "moment": "^2.22.2",
     "otplib": "^7.1.0",
     "request": "^2.87.0",
-    "request-promise-native": "^1.0.5"
+    "request-promise-native": "^1.0.5",
+    "snyk": "^1.116.4"
   },
   "description": "sskts-line-assistant",
   "devDependencies": {
@@ -45,7 +46,6 @@
     "nsp": "^3.2.1",
     "nyc": "^12.0.2",
     "rimraf": "^2.6.2",
-    "snyk": "^1.82.1",
     "supertest": "^3.1.0",
     "ts-node": "^6.1.0",
     "tslint": "^5.10.0",
@@ -74,7 +74,10 @@
     "tslint": "tslint --project tsconfig.json -c tslint.json src/**/*.ts --exclude **/*.spec.ts",
     "preversion": "npm run clean && npm run build && npm test",
     "version": "git add -A",
-    "postversion": "git push origin --tags"
+    "postversion": "git push origin --tags",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
-  "version": "2.5.1"
+  "version": "2.5.1",
+  "snyk": true
 }
