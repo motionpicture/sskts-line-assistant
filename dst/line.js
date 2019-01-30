@@ -27,7 +27,6 @@ const debug = createDebug('sskts-line-assistant:controller:line');
 exports.URL_PUSH_MESSAGE = 'https://api.line.me/v2/bot/message/push';
 /**
  * メッセージ送信
- * @export
  */
 function pushMessage(userId, text) {
     return __awaiter(this, void 0, void 0, function* () {

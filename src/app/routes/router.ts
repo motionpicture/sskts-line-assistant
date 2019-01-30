@@ -1,8 +1,6 @@
 /**
  * defaultルーター
- * @ignore
  */
-
 import * as express from 'express';
 
 import authRouter from './auth';

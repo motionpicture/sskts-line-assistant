@@ -58,7 +58,7 @@ Code sample are [here](https://github.com/motionpicture/sskts-line-assistant/tre
 
 ## License
 
-UNLICENSED
+ISC
 
 ## Reference
 

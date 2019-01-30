@@ -1,11 +1,9 @@
 /**
- * oauthミドルウェア
- * @module middlewares.authentication
+ * 認証ミドルウェア
  * @see https://aws.amazon.com/blogs/mobile/integrating-amazon-cognito-user-pools-with-api-gateway/
  */
-
 import { cognitoAuth } from '@motionpicture/express-middleware';
-import * as sskts from '@motionpicture/sskts-domain';
+import * as ssktsapi from '@motionpicture/sskts-api-nodejs-client';
 import { NextFunction, Request, Response } from 'express';
 import { OK } from 'http-status';
 import * as request from 'request-promise-native';
@@ -66,7 +64,7 @@ export default async (req: Request, res: Response, next: NextFunction) => {
             tokenDetecter: async () => credentials.access_token
         })(req, res, next);
     } catch (error) {
-        next(new sskts.factory.errors.Unauthorized(error.message));
+        next(new ssktsapi.factory.errors.Unauthorized(error.message));
     }
 };
 

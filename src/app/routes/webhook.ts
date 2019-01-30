@@ -1,8 +1,6 @@
 /**
  * webhookルーター
- * @ignore
  */
-
 import * as createDebug from 'debug';
 import * as express from 'express';
 import { OK } from 'http-status';

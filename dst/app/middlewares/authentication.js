@@ -1,9 +1,4 @@
 "use strict";
-/**
- * oauthミドルウェア
- * @module middlewares.authentication
- * @see https://aws.amazon.com/blogs/mobile/integrating-amazon-cognito-user-pools-with-api-gateway/
- */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -13,8 +8,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * 認証ミドルウェア
+ * @see https://aws.amazon.com/blogs/mobile/integrating-amazon-cognito-user-pools-with-api-gateway/
+ */
 const express_middleware_1 = require("@motionpicture/express-middleware");
-const sskts = require("@motionpicture/sskts-domain");
+const ssktsapi = require("@motionpicture/sskts-api-nodejs-client");
 const http_status_1 = require("http-status");
 const request = require("request-promise-native");
 const url_1 = require("url");
@@ -67,7 +66,7 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
         })(req, res, next);
     }
     catch (error) {
-        next(new sskts.factory.errors.Unauthorized(error.message));
+        next(new ssktsapi.factory.errors.Unauthorized(error.message));
     }
 });
 function sendLoginButton(user) {

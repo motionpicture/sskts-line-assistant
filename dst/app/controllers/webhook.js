@@ -83,7 +83,6 @@ function message(event, user) {
             }
         }
         catch (error) {
-            console.error(error);
             // エラーメッセージ表示
             yield LINE.pushMessage(userId, error.toString());
         }
@@ -101,22 +100,19 @@ function postback(event, user) {
         try {
             switch (data.action) {
                 case 'searchTransactionByReserveNum':
-                    yield PostbackController.searchTransactionByReserveNum(userId, data.reserveNum, data.theater);
+                    yield PostbackController.searchTransactionByReserveNum(user, data.reserveNum, data.theater);
                     break;
                 case 'searchTransactionById':
-                    yield PostbackController.searchTransactionById(userId, data.transaction);
+                    yield PostbackController.searchTransactionById(user, data.transaction);
                     break;
                 case 'searchTransactionByTel':
                     yield PostbackController.searchTransactionByTel(userId, data.tel, data.theater);
-                    break;
-                case 'pushNotification':
-                    yield PostbackController.pushNotification(userId, data.transaction);
                     break;
                 case 'searchTransactionsByDate':
                     yield PostbackController.searchTransactionsByDate(userId, event.postback.params.date);
                     break;
                 case 'startReturnOrder':
-                    yield PostbackController.startReturnOrder(user, data.transaction);
+                    yield PostbackController.startReturnOrder(user, data.orderNumber);
                     break;
                 case 'confirmReturnOrder':
                     yield PostbackController.confirmReturnOrder(user, data.transaction, data.pass);
@@ -125,7 +121,6 @@ function postback(event, user) {
             }
         }
         catch (error) {
-            console.error(error);
             // エラーメッセージ表示
             yield LINE.pushMessage(userId, error.toString());
         }

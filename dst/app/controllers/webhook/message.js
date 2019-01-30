@@ -1,8 +1,4 @@
 "use strict";
-/**
- * LINE webhook messageコントローラー
- * @namespace app.controllers.webhook.message
- */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -12,6 +8,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * LINE webhook messageコントローラー
+ */
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
@@ -20,7 +19,6 @@ const LINE = require("../../../line");
 const debug = createDebug('sskts-line-assistant:controller:webhook:message');
 /**
  * 使い方を送信する
- * @export
  */
 function pushHowToUse(userId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -88,7 +86,6 @@ function askTransactionInquiryKey(user) {
 exports.askTransactionInquiryKey = askTransactionInquiryKey;
 /**
  * 予約番号or電話番号のボタンを送信する
- * @export
  */
 function pushButtonsReserveNumOrTel(userId, message) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -138,7 +135,6 @@ function pushButtonsReserveNumOrTel(userId, message) {
 exports.pushButtonsReserveNumOrTel = pushButtonsReserveNumOrTel;
 /**
  * 日付選択を求める
- * @export
  */
 function askFromWhenAndToWhen(userId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -174,7 +170,6 @@ function askFromWhenAndToWhen(userId) {
 exports.askFromWhenAndToWhen = askFromWhenAndToWhen;
 /**
  * 取引CSVダウンロードURIを発行する
- * @export
  */
 function publishURI4transactionsCSV(userId, dateFrom, dateThrough) {
     return __awaiter(this, void 0, void 0, function* () {

@@ -1,9 +1,8 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * defaultルーター
- * @ignore
  */
-Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const auth_1 = require("./auth");
 const router = express.Router();
