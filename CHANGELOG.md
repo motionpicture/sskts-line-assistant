@@ -10,9 +10,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 
-- install @motionpicture/sskts-api-nodejs-client@5.0.0
-- install @motionpicture/sskts-domain@27.0.0
-
 ### Deprecated
 
 ### Removed
@@ -20,6 +17,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Fixed
 
 ### Security
+
+## v2.5.2 - 2019-01-30
+
+### Changed
+
+- install @motionpicture/sskts-api-nodejs-client@5.0.0
+- install @motionpicture/sskts-domain@27.0.0
 
 ## v2.5.1 - 2018-12-10
 
