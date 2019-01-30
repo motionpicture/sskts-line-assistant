@@ -83,7 +83,6 @@ function message(event, user) {
             }
         }
         catch (error) {
-            console.error(error);
             // エラーメッセージ表示
             yield LINE.pushMessage(userId, error.toString());
         }
@@ -122,7 +121,6 @@ function postback(event, user) {
             }
         }
         catch (error) {
-            console.error(error);
             // エラーメッセージ表示
             yield LINE.pushMessage(userId, error.toString());
         }

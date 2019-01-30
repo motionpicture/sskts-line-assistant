@@ -79,8 +79,10 @@ export async function searchTransactionByReserveNum(user: User, reserveNum: stri
         acceptedOffers: {
             itemOffered: {
                 reservationFor: {
-                    location: {
-                        branchCodes: [theaterCode.toString()]
+                    superEvent: {
+                        location: {
+                            branchCodes: [theaterCode.toString()]
+                        }
                     }
                 }
             }

@@ -90,7 +90,6 @@ export async function message(event: LINE.IWebhookEvent, user: User) {
                 throw new Error(`Unknown message type ${event.message.type}`);
         }
     } catch (error) {
-        console.error(error);
         // エラーメッセージ表示
         await LINE.pushMessage(userId, error.toString());
     }
@@ -133,7 +132,6 @@ export async function postback(event: LINE.IWebhookEvent, user: User) {
             default:
         }
     } catch (error) {
-        console.error(error);
         // エラーメッセージ表示
         await LINE.pushMessage(userId, error.toString());
     }

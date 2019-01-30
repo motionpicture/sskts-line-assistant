@@ -63,10 +63,6 @@ function searchTransactionById(user, transactionId) {
 exports.searchTransactionById = searchTransactionById;
 /**
  * 予約番号で取引を検索する
- * @export
- * @param userId LINEユーザーID
- * @param reserveNum 予約番号
- * @param theaterCode 劇場コード
  */
 function searchTransactionByReserveNum(user, reserveNum, theaterCode) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -82,8 +78,10 @@ function searchTransactionByReserveNum(user, reserveNum, theaterCode) {
             acceptedOffers: {
                 itemOffered: {
                     reservationFor: {
-                        location: {
-                            branchCodes: [theaterCode.toString()]
+                        superEvent: {
+                            location: {
+                                branchCodes: [theaterCode.toString()]
+                            }
                         }
                     }
                 }
@@ -100,10 +98,6 @@ function searchTransactionByReserveNum(user, reserveNum, theaterCode) {
 exports.searchTransactionByReserveNum = searchTransactionByReserveNum;
 /**
  * 電話番号で取引を検索する
- * @export
- * @param userId LINEユーザーID
- * @param tel 電話番号
- * @param theaterCode 劇場コード
  */
 function searchTransactionByTel(userId, tel, __) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -114,9 +108,6 @@ function searchTransactionByTel(userId, tel, __) {
 exports.searchTransactionByTel = searchTransactionByTel;
 /**
  * 取引IDから取引情報詳細を送信する
- * @export
- * @param userId LINEユーザーID
- * @param transactionId 取引ID
  */
 // tslint:disable-next-line:cyclomatic-complexity max-func-body-length
 function pushTransactionDetails(userId, orderNumber) {
@@ -609,18 +600,16 @@ function confirmReturnOrder(user, transactionId, pass) {
             endpoint: API_ENDPOINT,
             auth: user.authClient
         });
-        const result = yield returnOrderService.confirm({
+        yield returnOrderService.confirm({
             id: transactionId
         });
-        debug('return order transaction confirmed.', result);
+        debug('return order transaction confirmed.');
         yield LINE.pushMessage(user.userId, '返品取引を受け付けました');
     });
 }
 exports.confirmReturnOrder = confirmReturnOrder;
 /**
  * 取引検索(csvダウンロード)
- * @export
- * @param userId ユーザーID
  * @param date YYYY-MM-DD形式
  */
 function searchTransactionsByDate(userId, date) {
