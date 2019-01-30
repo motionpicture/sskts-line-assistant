@@ -238,7 +238,7 @@ function pushTransactionDetails(userId, orderNumber) {
                     }
                     break;
                 case ssktsapi.factory.actionType.PayAction:
-                    actionName = `支払(${action.object.paymentMethod.paymentMethod})`;
+                    actionName = `支払(${action.object[0].paymentMethod.typeOf})`;
                     break;
                 case ssktsapi.factory.actionType.UseAction:
                     actionName = `${action.object.typeOf}使用`;
