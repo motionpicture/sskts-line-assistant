@@ -1,7 +1,4 @@
 "use strict";
-/**
- * 顔ログインミドルウェア
- */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -11,7 +8,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const sskts = require("@motionpicture/sskts-domain");
+/**
+ * 顔ログインミドルウェア
+ */
+const ssktsapi = require("@motionpicture/sskts-api-nodejs-client");
 const http_status_1 = require("http-status");
 const querystring = require("querystring");
 const request = require("request-promise-native");
@@ -122,6 +122,6 @@ exports.default = (req, res, next) => __awaiter(this, void 0, void 0, function* 
         next();
     }
     catch (error) {
-        next(new sskts.factory.errors.Unauthorized(error.message));
+        next(new ssktsapi.factory.errors.Unauthorized(error.message));
     }
 });

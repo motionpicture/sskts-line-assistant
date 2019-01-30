@@ -1,8 +1,6 @@
 /**
  * Expressアプリケーション
- * @ignore
  */
-
 import * as sskts from '@motionpicture/sskts-domain';
 import * as bodyParser from 'body-parser';
 import * as createDebug from 'debug';

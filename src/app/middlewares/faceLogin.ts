@@ -1,8 +1,7 @@
 /**
  * 顔ログインミドルウェア
  */
-
-import * as sskts from '@motionpicture/sskts-domain';
+import * as ssktsapi from '@motionpicture/sskts-api-nodejs-client';
 import { NextFunction, Request, Response } from 'express';
 import { OK } from 'http-status';
 import * as querystring from 'querystring';
@@ -119,6 +118,6 @@ export default async (req: Request, res: Response, next: NextFunction) => {
 
         next();
     } catch (error) {
-        next(new sskts.factory.errors.Unauthorized(error.message));
+        next(new ssktsapi.factory.errors.Unauthorized(error.message));
     }
 };

@@ -14,29 +14,48 @@ import User from '../../user';
 
 const debug = createDebug('sskts-line-assistant:controller:webhook:postback');
 const MESSAGE_TRANSACTION_NOT_FOUND = '該当取引はありません';
+const API_ENDPOINT = <string>process.env.API_ENDPOINT;
+if (API_ENDPOINT === undefined) {
+    throw new Error('process.env.API_ENDPOINT undefined.');
+}
 
 /**
  * IDで取引検索
  */
-export async function searchTransactionById(userId: string, transactionId: string) {
-    debug(userId, transactionId);
-    await LINE.pushMessage(userId, '取引IDで検索しています...');
+export async function searchTransactionById(user: User, transactionId: string) {
+    debug(user.userId, transactionId);
+    await LINE.pushMessage(user.userId, '取引IDで検索しています...');
 
     // 取引検索
-    const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
-    const transaction = await transactionRepo.findById(sskts.factory.transactionType.PlaceOrder, transactionId);
+    const placeOrderService = new ssktsapi.service.txn.PlaceOrder({
+        endpoint: API_ENDPOINT,
+        auth: user.authClient
+    });
+    const searchResult = await placeOrderService.search({
+        typeOf: ssktsapi.factory.transactionType.PlaceOrder,
+        ids: [transactionId]
+    });
+    const transaction = searchResult.data.shift();
+    if (transaction === undefined) {
+        await LINE.pushMessage(user.userId, `存在しない取引IDです: ${transactionId}`);
+
+        return;
+
+    }
 
     switch (transaction.status) {
-        case sskts.factory.transactionStatusType.InProgress:
-            await LINE.pushMessage(userId, `注文取引[${transactionId}]は進行中です。`);
+        case ssktsapi.factory.transactionStatusType.InProgress:
+            await LINE.pushMessage(user.userId, `注文取引[${transactionId}]は進行中です`);
             break;
 
-        case sskts.factory.transactionStatusType.Confirmed:
-            await pushTransactionDetails(userId, (<sskts.factory.transaction.placeOrder.IResult>transaction.result).order.orderNumber);
+        case ssktsapi.factory.transactionStatusType.Confirmed:
+            await pushTransactionDetails(
+                user.userId, (<ssktsapi.factory.transaction.placeOrder.IResult>transaction.result).order.orderNumber
+            );
             break;
 
-        case sskts.factory.transactionStatusType.Expired:
-            await pushExpiredTransactionDetails(userId, transactionId);
+        case ssktsapi.factory.transactionStatusType.Expired:
+            await pushExpiredTransactionDetails(user, transactionId);
             break;
 
         default:
@@ -45,40 +64,42 @@ export async function searchTransactionById(userId: string, transactionId: strin
 
 /**
  * 予約番号で取引を検索する
- * @export
- * @param userId LINEユーザーID
- * @param reserveNum 予約番号
- * @param theaterCode 劇場コード
  */
-export async function searchTransactionByReserveNum(userId: string, reserveNum: string, theaterCode: string) {
-    debug(userId, reserveNum);
-    await LINE.pushMessage(userId, '予約番号で検索しています...');
+export async function searchTransactionByReserveNum(user: User, reserveNum: string, theaterCode: string) {
+    debug(user.userId, reserveNum);
+    await LINE.pushMessage(user.userId, '予約番号で検索しています...');
 
-    // 取引検索
-    const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
-    await transactionRepo.transactionModel.findOne(
-        {
-            // tslint:disable-next-line:no-magic-numbers
-            'result.order.orderInquiryKey.confirmationNumber': parseInt(reserveNum, 10),
-            'result.order.orderInquiryKey.theaterCode': theaterCode
-        },
-        'result'
-    ).exec().then(async (doc) => {
-        if (doc === null) {
-            await LINE.pushMessage(userId, MESSAGE_TRANSACTION_NOT_FOUND);
-        } else {
-            const transaction = <sskts.factory.transaction.placeOrder.ITransaction>doc.toObject();
-            await pushTransactionDetails(userId, (<sskts.factory.transaction.placeOrder.IResult>transaction.result).order.orderNumber);
+    // 注文検索
+    const orderService = new ssktsapi.service.Order({
+        endpoint: API_ENDPOINT,
+        auth: user.authClient
+    });
+    const searchOrdersResult = await orderService.search({
+        confirmationNumbers: [reserveNum.toString()],
+        acceptedOffers: {
+            itemOffered: {
+                reservationFor: {
+                    location: {
+                        branchCodes: [theaterCode.toString()]
+                    }
+                }
+            }
         }
     });
+    const order = searchOrdersResult.data.shift();
+    if (order === undefined) {
+        await LINE.pushMessage(user.userId, MESSAGE_TRANSACTION_NOT_FOUND);
+
+        return;
+    }
+
+    await pushTransactionDetails(
+        user.userId, order.orderNumber
+    );
 }
 
 /**
  * 電話番号で取引を検索する
- * @export
- * @param userId LINEユーザーID
- * @param tel 電話番号
- * @param theaterCode 劇場コード
  */
 export async function searchTransactionByTel(userId: string, tel: string, __: string) {
     debug('tel:', tel);
@@ -87,9 +108,6 @@ export async function searchTransactionByTel(userId: string, tel: string, __: st
 
 /**
  * 取引IDから取引情報詳細を送信する
- * @export
- * @param userId LINEユーザーID
- * @param transactionId 取引ID
  */
 // tslint:disable-next-line:cyclomatic-complexity max-func-body-length
 async function pushTransactionDetails(userId: string, orderNumber: string) {
@@ -102,19 +120,19 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     const ownershipInfo = new sskts.repository.OwnershipInfo(sskts.mongoose.connection);
 
     // 取引検索
-    const transaction = <sskts.factory.transaction.placeOrder.ITransaction>await transactionRepo.transactionModel.findOne({
+    const transaction = <ssktsapi.factory.transaction.placeOrder.ITransaction>await transactionRepo.transactionModel.findOne({
         'result.order.orderNumber': orderNumber,
-        typeOf: sskts.factory.transactionType.PlaceOrder
+        typeOf: ssktsapi.factory.transactionType.PlaceOrder
     }).then((doc: sskts.mongoose.Document) => doc.toObject());
 
     // 確定取引なので、結果はundefinedではない
-    const transactionResult = <sskts.factory.transaction.placeOrder.IResult>transaction.result;
+    const transactionResult = <ssktsapi.factory.transaction.placeOrder.IResult>transaction.result;
 
     // 注文検索
     let order = await orderRepo.orderModel.findOne({
         orderNumber: orderNumber
     }).exec().then((doc) => {
-        return (doc === null) ? null : <sskts.factory.order.IOrder>doc.toObject();
+        return (doc === null) ? null : <ssktsapi.factory.order.IOrder>doc.toObject();
     });
     debug('order:', order);
     if (order === null) {
@@ -136,7 +154,7 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
                 return util.format(
                     '💲%s\n%s %s\n@%s\n~%s',
                     i.identifier,
-                    i.typeOfGood.reservedTicket.ticketedSeat.seatNumber,
+                    (i.typeOfGood.reservedTicket.ticketedSeat !== undefined) ? i.typeOfGood.reservedTicket.ticketedSeat.seatNumber : '',
                     i.typeOfGood.reservedTicket.coaTicketInfo.ticketName,
                     i.typeOfGood.reservationStatus,
                     moment(i.ownedThrough).format('YYYY-MM-DD HH:mm:ss')
@@ -172,28 +190,28 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
     // 非同期タスク検索
     const tasks = await taskRepo.taskModel.find({
         'data.transactionId': transaction.id
-    }).exec().then((docs) => docs.map((doc) => <sskts.factory.task.ITask<sskts.factory.taskName>>doc.toObject()));
+    }).exec().then((docs) => docs.map((doc) => <ssktsapi.factory.task.ITask<ssktsapi.factory.taskName>>doc.toObject()));
 
     // タスクの実行日時を調べる
     const taskStrs = tasks.map((task) => {
         let taskNameStr = '???';
         switch (task.name) {
-            case sskts.factory.taskName.PayPecorino:
-                taskNameStr = 'Pecorino支払';
+            case ssktsapi.factory.taskName.PayAccount:
+                taskNameStr = 'Account支払';
                 break;
-            case sskts.factory.taskName.PayCreditCard:
+            case ssktsapi.factory.taskName.PayCreditCard:
                 taskNameStr = 'クレカ支払';
                 break;
-            case sskts.factory.taskName.UseMvtk:
+            case ssktsapi.factory.taskName.UseMvtk:
                 taskNameStr = 'ムビ使用';
                 break;
-            case sskts.factory.taskName.PlaceOrder:
+            case ssktsapi.factory.taskName.PlaceOrder:
                 taskNameStr = '注文作成';
                 break;
-            case sskts.factory.taskName.SendEmailMessage:
+            case ssktsapi.factory.taskName.SendEmailMessage:
                 taskNameStr = 'メール送信';
                 break;
-            case sskts.factory.taskName.SendOrder:
+            case ssktsapi.factory.taskName.SendOrder:
                 taskNameStr = '注文配送';
                 break;
             default:
@@ -201,13 +219,13 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
 
         let statusStr = '→';
         switch (task.status) {
-            case sskts.factory.taskStatus.Ready:
+            case ssktsapi.factory.taskStatus.Ready:
                 statusStr = '-';
                 break;
-            case sskts.factory.taskStatus.Executed:
+            case ssktsapi.factory.taskStatus.Executed:
                 statusStr = '↓';
                 break;
-            case sskts.factory.taskStatus.Aborted:
+            case ssktsapi.factory.taskStatus.Aborted:
                 statusStr = '×';
                 break;
 
@@ -216,7 +234,7 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
 
         return util.format(
             '%s\n%s %s',
-            (task.status === sskts.factory.taskStatus.Executed && task.lastTriedAt !== null)
+            (task.status === ssktsapi.factory.taskStatus.Executed && task.lastTriedAt !== null)
                 ? moment(task.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')
                 : '---------- --:--:--',
             statusStr,
@@ -241,16 +259,16 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
         .map((action) => {
             let actionName = action.typeOf;
             switch (action.typeOf) {
-                case sskts.factory.actionType.ReturnAction:
+                case ssktsapi.factory.actionType.ReturnAction:
                     actionName = '返品';
                     break;
-                case sskts.factory.actionType.RefundAction:
+                case ssktsapi.factory.actionType.RefundAction:
                     actionName = '返金';
                     break;
-                case sskts.factory.actionType.OrderAction:
+                case ssktsapi.factory.actionType.OrderAction:
                     actionName = '注文受付';
                     break;
-                case sskts.factory.actionType.SendAction:
+                case ssktsapi.factory.actionType.SendAction:
                     if (action.object.typeOf === 'Order') {
                         actionName = '配送';
                     } else if (action.object.typeOf === 'EmailMessage') {
@@ -259,10 +277,10 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
                         actionName = `${action.typeOf} ${action.object.typeOf}`;
                     }
                     break;
-                case sskts.factory.actionType.PayAction:
+                case ssktsapi.factory.actionType.PayAction:
                     actionName = `支払(${action.object.paymentMethod.paymentMethod})`;
                     break;
-                case sskts.factory.actionType.UseAction:
+                case ssktsapi.factory.actionType.UseAction:
                     actionName = `${action.object.typeOf}使用`;
                     break;
                 default:
@@ -270,13 +288,13 @@ async function pushTransactionDetails(userId: string, orderNumber: string) {
 
             let statusStr = '→';
             switch (action.actionStatus) {
-                case sskts.factory.actionStatusType.CanceledActionStatus:
+                case ssktsapi.factory.actionStatusType.CanceledActionStatus:
                     statusStr = '←';
                     break;
-                case sskts.factory.actionStatusType.CompletedActionStatus:
+                case ssktsapi.factory.actionStatusType.CompletedActionStatus:
                     statusStr = '↓';
                     break;
-                case sskts.factory.actionStatusType.FailedActionStatus:
+                case ssktsapi.factory.actionStatusType.FailedActionStatus:
                     statusStr = '×';
                     break;
 
@@ -381,7 +399,7 @@ ${taskStrs}
             data: `action=searchTransactionById&transaction=${transaction.id}`
         }
     ];
-    if (order.orderStatus === sskts.factory.orderStatus.OrderDelivered) {
+    if (order.orderStatus === ssktsapi.factory.orderStatus.OrderDelivered) {
         // postActions.push({
         //     type: 'postback',
         //     label: 'メール送信',
@@ -390,7 +408,7 @@ ${taskStrs}
         postActions.push({
             type: 'postback',
             label: '返品する',
-            data: `action=startReturnOrder&transaction=${transaction.id}`
+            data: `action=startReturnOrder&orderNumber=${order.orderNumber}`
         });
     }
 
@@ -422,34 +440,48 @@ ${taskStrs}
  * 期限切れの取引詳細を報告する
  */
 // tslint:disable-next-line:cyclomatic-complexity max-func-body-length
-async function pushExpiredTransactionDetails(userId: string, transactionId: string) {
-    await LINE.pushMessage(userId, `${transactionId}の取引詳細をまとめています...`);
+async function pushExpiredTransactionDetails(user: User, transactionId: string) {
+    await LINE.pushMessage(user.userId, `${transactionId}の取引詳細をまとめています...`);
+
+    // 取引検索
+    const placeOrderService = new ssktsapi.service.txn.PlaceOrder({
+        endpoint: API_ENDPOINT,
+        auth: user.authClient
+    });
+    const searchResult = await placeOrderService.search({
+        typeOf: ssktsapi.factory.transactionType.PlaceOrder,
+        ids: [transactionId]
+    });
+    const transaction = searchResult.data.shift();
+    if (transaction === undefined) {
+        await LINE.pushMessage(user.userId, `存在しない取引IDです: ${transactionId}`);
+
+        return;
+
+    }
 
     const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
     const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
-    const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
 
-    // 取引検索
-    const transaction = await transactionRepo.findById(ssktsapi.factory.transactionType.PlaceOrder, transactionId);
     const report = sskts.service.report.transaction.transaction2report({ transaction: transaction });
     debug('report:', report);
 
     // 非同期タスク検索
     const tasks = await taskRepo.taskModel.find({
         'data.transactionId': transaction.id
-    }).exec().then((docs) => docs.map((doc) => <sskts.factory.task.ITask<sskts.factory.taskName>>doc.toObject()));
+    }).exec().then((docs) => docs.map((doc) => <ssktsapi.factory.task.ITask<ssktsapi.factory.taskName>>doc.toObject()));
 
     // タスクの実行日時を調べる
     const taskStrs = tasks.map((task) => {
         let taskNameStr = '???';
         switch (task.name) {
-            case sskts.factory.taskName.CancelCreditCard:
+            case ssktsapi.factory.taskName.CancelCreditCard:
                 taskNameStr = 'クレカ取消';
                 break;
-            case sskts.factory.taskName.CancelMvtk:
+            case ssktsapi.factory.taskName.CancelMvtk:
                 taskNameStr = 'ムビ取消';
                 break;
-            case sskts.factory.taskName.CancelSeatReservation:
+            case ssktsapi.factory.taskName.CancelSeatReservation:
                 taskNameStr = '仮予約取消';
                 break;
             default:
@@ -457,13 +489,13 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
 
         let statusStr = '→';
         switch (task.status) {
-            case sskts.factory.taskStatus.Ready:
+            case ssktsapi.factory.taskStatus.Ready:
                 statusStr = '-';
                 break;
-            case sskts.factory.taskStatus.Executed:
+            case ssktsapi.factory.taskStatus.Executed:
                 statusStr = '↓';
                 break;
-            case sskts.factory.taskStatus.Aborted:
+            case ssktsapi.factory.taskStatus.Aborted:
                 statusStr = '×';
                 break;
 
@@ -472,7 +504,7 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
 
         return util.format(
             '%s\n%s %s',
-            (task.status === sskts.factory.taskStatus.Executed && task.lastTriedAt !== null)
+            (task.status === ssktsapi.factory.taskStatus.Executed && task.lastTriedAt !== null)
                 ? moment(task.lastTriedAt).format('YYYY-MM-DD HH:mm:ss')
                 : '---------- --:--:--',
             statusStr,
@@ -483,7 +515,7 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
     // 承認アクション検索
     const actions = await actionRepo.actionModel.find(
         {
-            typeOf: sskts.factory.actionType.AuthorizeAction,
+            typeOf: ssktsapi.factory.actionType.AuthorizeAction,
             'purpose.typeOf': ssktsapi.factory.transactionType.PlaceOrder,
             'purpose.id': transaction.id
         }
@@ -500,20 +532,20 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
             }
             let description = '';
             switch (action.object.typeOf) {
-                case sskts.factory.action.authorize.paymentMethod.creditCard.ObjectType.CreditCard:
+                case ssktsapi.factory.paymentMethodType.CreditCard:
                     actionName = 'クレカオーソリ';
                     description = action.object.orderId;
                     break;
-                case sskts.factory.action.authorize.offer.seatReservation.ObjectType.SeatReservation:
+                case ssktsapi.factory.action.authorize.offer.seatReservation.ObjectType.SeatReservation:
                     actionName = '座席仮予約';
                     if (action.result !== undefined) {
                         description = action.result.updTmpReserveSeatResult.tmpReserveNum;
                     }
                     break;
-                case sskts.factory.action.authorize.discount.mvtk.ObjectType.Mvtk:
+                case ssktsapi.factory.action.authorize.discount.mvtk.ObjectType.Mvtk:
                     actionName = 'ムビチケ承認';
                     if (action.result !== undefined) {
-                        description = (<sskts.factory.action.authorize.discount.mvtk.IAction>action).object.seatInfoSyncIn.knyknrNoInfo.map((i) => i.knyknrNo).join(',');
+                        description = (<ssktsapi.factory.action.authorize.discount.mvtk.IAction>action).object.seatInfoSyncIn.knyknrNoInfo.map((i) => i.knyknrNo).join(',');
                     }
                     break;
                 default:
@@ -521,13 +553,13 @@ async function pushExpiredTransactionDetails(userId: string, transactionId: stri
 
             let statusStr = '→';
             switch (action.actionStatus) {
-                case sskts.factory.actionStatusType.CanceledActionStatus:
+                case ssktsapi.factory.actionStatusType.CanceledActionStatus:
                     statusStr = '←';
                     break;
-                case sskts.factory.actionStatusType.CompletedActionStatus:
+                case ssktsapi.factory.actionStatusType.CompletedActionStatus:
                     statusStr = '↓';
                     break;
-                case sskts.factory.actionStatusType.FailedActionStatus:
+                case ssktsapi.factory.actionStatusType.FailedActionStatus:
                     statusStr = '×';
                     break;
 
@@ -591,20 +623,15 @@ ${taskStrs}
         ;
 
     await Promise.all(transactionDetails.map(async (text) => {
-        await LINE.pushMessage(userId, text);
+        await LINE.pushMessage(user.userId, text);
     }));
 }
 
 /**
  * 返品取引開始
  */
-export async function startReturnOrder(user: User, transactionId: string) {
+export async function startReturnOrder(user: User, orderNumber: string) {
     await LINE.pushMessage(user.userId, '返品取引を開始します...');
-    const API_ENDPOINT = process.env.API_ENDPOINT;
-    if (API_ENDPOINT === undefined) {
-        throw new Error('process.env.API_ENDPOINT undefined.');
-    }
-
     const returnOrderService = new ssktsapi.service.transaction.ReturnOrder({
         endpoint: API_ENDPOINT,
         auth: user.authClient
@@ -612,7 +639,9 @@ export async function startReturnOrder(user: User, transactionId: string) {
     const returnOrderTransaction = await returnOrderService.start({
         // tslint:disable-next-line:no-magic-numbers
         expires: moment().add(15, 'minutes').toDate(),
-        transactionId: transactionId
+        object: {
+            order: { orderNumber: orderNumber }
+        }
     });
     debug('return order transaction started.', returnOrderTransaction.id);
 
@@ -633,8 +662,8 @@ export async function startReturnOrder(user: User, transactionId: string) {
     };
     await user.saveMFAPass(pass, postEvent);
 
-    await LINE.pushMessage(user.userId, '返品取引を開始しました。');
-    await LINE.pushMessage(user.userId, '二段階認証を行います。送信されてくる文字列を入力してください。');
+    await LINE.pushMessage(user.userId, '返品取引を開始しました');
+    await LINE.pushMessage(user.userId, '二段階認証を行います。送信されてくる文字列を入力してください');
     await LINE.pushMessage(user.userId, pass);
 }
 
@@ -646,7 +675,7 @@ export async function confirmReturnOrder(user: User, transactionId: string, pass
 
     const postEvent = await user.verifyMFAPass(pass);
     if (postEvent === null) {
-        await LINE.pushMessage(user.userId, 'パスの有効期限が切れました。');
+        await LINE.pushMessage(user.userId, 'パスの有効期限が切れました');
 
         return;
     }
@@ -654,68 +683,20 @@ export async function confirmReturnOrder(user: User, transactionId: string, pass
     // パス削除
     await user.deleteMFAPass(pass);
 
-    const API_ENDPOINT = process.env.API_ENDPOINT;
-    if (API_ENDPOINT === undefined) {
-        throw new Error('process.env.API_ENDPOINT undefined.');
-    }
     const returnOrderService = new ssktsapi.service.transaction.ReturnOrder({
         endpoint: API_ENDPOINT,
         auth: user.authClient
     });
-    const result = await returnOrderService.confirm({
-        transactionId: transactionId
+    await returnOrderService.confirm({
+        id: transactionId
     });
-    debug('return order transaction confirmed.', result);
+    debug('return order transaction confirmed.');
 
-    await LINE.pushMessage(user.userId, '返品取引を受け付けました。');
-}
-
-/**
- * 取引を通知する
- * @export
- * @param userId LINEユーザーID
- * @param transactionId 取引ID
- */
-export async function pushNotification(userId: string, transactionId: string) {
-    await LINE.pushMessage(userId, '送信中...');
-
-    const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
-
-    // タスク検索
-    const tasks = await taskRepo.taskModel.find({
-        name: sskts.factory.taskName.SendEmailMessage,
-        'data.transactionId': transactionId
-    }).exec();
-
-    if (tasks.length === 0) {
-        await LINE.pushMessage(userId, 'Task not found.');
-
-        return;
-    }
-
-    let promises: Promise<void>[] = [];
-    promises = promises.concat(tasks.map(async (task) => {
-        await sskts.service.task.execute(<sskts.factory.task.ITask<sskts.factory.taskName>>task.toObject())({
-            taskRepo: taskRepo,
-            connection: sskts.mongoose.connection
-        });
-    }));
-
-    try {
-        await Promise.all(promises);
-    } catch (error) {
-        await LINE.pushMessage(userId, `送信失敗:${error.message}`);
-
-        return;
-    }
-
-    await LINE.pushMessage(userId, '送信完了');
+    await LINE.pushMessage(user.userId, '返品取引を受け付けました');
 }
 
 /**
  * 取引検索(csvダウンロード)
- * @export
- * @param userId ユーザーID
  * @param date YYYY-MM-DD形式
  */
 export async function searchTransactionsByDate(userId: string, date: string) {

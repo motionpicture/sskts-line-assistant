@@ -1,8 +1,6 @@
 /**
  * 認証ルーター
- * @ignore
  */
-
 import * as express from 'express';
 import * as request from 'request-promise-native';
 

@@ -107,19 +107,15 @@ export async function postback(event: LINE.IWebhookEvent, user: User) {
     try {
         switch (data.action) {
             case 'searchTransactionByReserveNum':
-                await PostbackController.searchTransactionByReserveNum(userId, <string>data.reserveNum, <string>data.theater);
+                await PostbackController.searchTransactionByReserveNum(user, <string>data.reserveNum, <string>data.theater);
                 break;
 
             case 'searchTransactionById':
-                await PostbackController.searchTransactionById(userId, <string>data.transaction);
+                await PostbackController.searchTransactionById(user, <string>data.transaction);
                 break;
 
             case 'searchTransactionByTel':
                 await PostbackController.searchTransactionByTel(userId, <string>data.tel, <string>data.theater);
-                break;
-
-            case 'pushNotification':
-                await PostbackController.pushNotification(userId, <string>data.transaction);
                 break;
 
             case 'searchTransactionsByDate':
@@ -127,7 +123,7 @@ export async function postback(event: LINE.IWebhookEvent, user: User) {
                 break;
 
             case 'startReturnOrder':
-                await PostbackController.startReturnOrder(user, <string>data.transaction);
+                await PostbackController.startReturnOrder(user, <string>data.orderNumber);
                 break;
 
             case 'confirmReturnOrder':

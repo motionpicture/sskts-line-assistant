@@ -53,7 +53,6 @@ export const URL_PUSH_MESSAGE = 'https://api.line.me/v2/bot/message/push';
 
 /**
  * メッセージ送信
- * @export
  */
 export async function pushMessage(userId: string, text: string) {
     debug('pushing a message...', text);

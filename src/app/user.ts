@@ -49,7 +49,6 @@ export interface ICredentials {
 
 /**
  * トークンに含まれる情報インターフェース
- * @export
  */
 export interface IPayload {
     sub: string;
@@ -66,7 +65,6 @@ export interface IPayload {
 
 /**
  * ユーザー設定インターフェース
- * @export
  */
 export interface IConfigurations {
     host: string;

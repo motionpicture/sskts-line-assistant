@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 
+- install @motionpicture/sskts-api-nodejs-client@5.0.0
+- install @motionpicture/sskts-domain@27.0.0
+
 ### Deprecated
 
 ### Removed

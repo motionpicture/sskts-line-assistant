@@ -1,7 +1,6 @@
 "use strict";
 /**
  * Expressアプリケーション
- * @ignore
  */
 const sskts = require("@motionpicture/sskts-domain");
 const bodyParser = require("body-parser");
