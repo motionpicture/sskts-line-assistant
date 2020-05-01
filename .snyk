@@ -1,0 +1,26 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.14.1
+ignore: {}
+# patches apply the minimum changes required to fix a vulnerability
+patch:
+  SNYK-JS-LODASH-567746:
+    - request-promise-native > request-promise-core > lodash:
+        patched: '2020-05-01T03:46:34.283Z'
+    - '@motionpicture/express-middleware > request-promise-native > request-promise-core > lodash':
+        patched: '2020-05-01T03:46:34.283Z'
+    - '@motionpicture/sskts-domain > @motionpicture/gmo-service > request-promise-native > request-promise-core > lodash':
+        patched: '2020-05-01T03:46:34.283Z'
+    - '@motionpicture/sskts-domain > @motionpicture/sskts-factory > @motionpicture/gmo-service > request-promise-native > request-promise-core > lodash':
+        patched: '2020-05-01T03:46:34.283Z'
+    - '@motionpicture/sskts-domain > pug > pug-code-gen > constantinople > babel-types > lodash':
+        patched: '2020-05-01T03:46:34.283Z'
+    - '@motionpicture/sskts-domain > pug > pug-filters > constantinople > babel-types > lodash':
+        patched: '2020-05-01T03:46:34.283Z'
+    - '@motionpicture/sskts-api-nodejs-client > @motionpicture/sskts-api-abstract-client > @motionpicture/sskts-factory > @motionpicture/gmo-service > request-promise-native > request-promise-core > lodash':
+        patched: '2020-05-01T03:46:34.283Z'
+    - '@motionpicture/sskts-domain > pug > pug-code-gen > pug-attrs > constantinople > babel-types > lodash':
+        patched: '2020-05-01T03:46:34.283Z'
+    - '@motionpicture/sskts-api-nodejs-client > @motionpicture/sskts-api-abstract-client > @motionpicture/sskts-factory > @cinerino/factory > @motionpicture/gmo-service > request-promise-native > request-promise-core > lodash':
+        patched: '2020-05-01T03:46:34.283Z'
+    - '@motionpicture/sskts-domain > mongoose > async > lodash':
+        patched: '2020-05-01T03:46:34.283Z'
