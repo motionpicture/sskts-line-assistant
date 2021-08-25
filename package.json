@@ -18,7 +18,7 @@
     "debug": "^3.1.0",
     "express": "^4.16.3",
     "http-status": "^1.1.2",
-    "ioredis": "^3.2.2",
+    "ioredis": "^4.27.8",
     "jsonwebtoken": "^8.2.2",
     "jwk-to-pem": "^1.2.6",
     "moment": "^2.24.0",
