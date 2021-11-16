@@ -13,7 +13,7 @@
     "@motionpicture/express-middleware": "^0.1.0",
     "@motionpicture/sskts-api-nodejs-client": "^5.0.0",
     "@motionpicture/sskts-domain": "^27.0.1",
-    "aws-sdk": "^2.395.0",
+    "aws-sdk": "^2.814.0",
     "body-parser": "^1.18.3",
     "debug": "^3.1.0",
     "express": "^4.16.3",
